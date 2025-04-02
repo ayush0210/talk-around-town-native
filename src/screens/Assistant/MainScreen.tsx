@@ -25,6 +25,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import Loader from './Loader';
 import ChildInfoModal from '../ChildInfoModal';
 import {AuthContext, AuthContextType} from '../../context/AuthContext';
+import PushNotification from 'react-native-push-notification';
 
 interface Child {
   id: number;
@@ -610,19 +611,46 @@ const MainScreen: React.FC = () => {
         </ScrollView>
 
         <View style={styles.bottomButtonContainer}>
-          <TouchableOpacity
-            style={styles.childInfoButton}
-            onPress={() => setShowChildInfo(true)}>
-            <Icon
-              name="child-care"
-              size={20}
-              color="white"
-              style={styles.buttonIcon}
-            />
-            <Text style={styles.childInfoButtonText}>Children Information</Text>
-          </TouchableOpacity>
-        </View>
-
+  <View style={styles.bottomButtonRow}>
+    <TouchableOpacity
+      style={styles.childInfoButton}
+      onPress={() => setShowChildInfo(true)}>
+      <Icon
+        name="child-care"
+        size={20}
+        color="white"
+        style={styles.buttonIcon}
+      />
+      <Text style={styles.childInfoButtonText}>Children Information</Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity
+      style={styles.watchTestButton}
+      onPress={() => {
+        // Send a test notification
+        PushNotification.localNotification({
+          channelId: 'location-tips',
+          title: 'ENACT Watch Test',
+          message: 'This is a test notification for Apple Watch',
+          userInfo: {
+            tipId: 'test-' + Date.now(),
+            locationName: 'Test Location',
+            locationType: 'Test',
+          },
+          // iOS specific options for Apple Watch
+          category: 'location_tip',
+        });
+      }}>
+      <Icon
+        name="watch"
+        size={20}
+        color="white"
+        style={styles.buttonIcon}
+      />
+      <Text style={styles.childInfoButtonText}>Test Watch</Text>
+    </TouchableOpacity>
+  </View>
+</View>
         {userInfo.access_token ? (
           <ChildInfoModal
             visible={showChildInfo}
@@ -666,6 +694,39 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f0f2f5',
+  },
+  bottomButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  childInfoButton: {
+    flex: 1,
+    backgroundColor: '#5856D6',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  watchTestButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   container: {
     flex: 1,
@@ -842,19 +903,7 @@ const styles = StyleSheet.create({
     right: 16,
     backgroundColor: 'transparent',
   },
-  childInfoButton: {
-    backgroundColor: '#5856D6',
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
+
   childInfoButtonText: {
     color: 'white',
     fontSize: 16,

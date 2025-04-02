@@ -21,12 +21,12 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import HomeScreen from '../screens/HomeScreen';
 import MainScreen from '../screens/MainScreen';
 import AssistantScreen from '../screens/Assistant/MainScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import LocationListScreen from '../screens/LocationList';
 import {Location} from 'react-native-get-location';
+import TestWatchNotificationScreen from '../screens/TestWatchNotificationScreen';
 
 // Types
 export type RootStackParamList = {
@@ -41,6 +41,7 @@ export type RootStackParamList = {
       pinColor: string;
     }[];
   };
+  TestWatchNotifications: undefined; // Added to fix the error
 };
 
 type AuthStackParamList = {
@@ -167,7 +168,7 @@ const AuthNavigator = () => (
 // Root Navigator remains unchanged
 const RootNavigator = () => {
   const {userInfo, splashLoading} = useContext<AuthContextType>(AuthContext);
-
+  
   return (
     <RootStack.Navigator screenOptions={{headerShown: false}}>
       {splashLoading ? (
@@ -176,6 +177,10 @@ const RootNavigator = () => {
         <>
           <RootStack.Screen name="Main" component={TabNavigator} />
           <RootStack.Screen name="LocationList" component={LocationListScreen} />
+          <RootStack.Screen
+            name="TestWatchNotifications"
+            component={TestWatchNotificationScreen}
+          />
         </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
