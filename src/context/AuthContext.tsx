@@ -163,12 +163,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const res = await axiosInstance.post('/login', { 
-        email, 
-        password 
-      });
+      const res = await axiosInstance.post('/login', { email, password });
       
-      const userInfo = res.data;
+      // Store isAdmin in userInfo
+      const userInfo = {
+        ...res.data,
+        isAdmin: res.data.isAdmin // Ensure isAdmin is saved in userInfo
+      };
+      
       setUserInfo(userInfo);
       await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
     } catch (e: any) {

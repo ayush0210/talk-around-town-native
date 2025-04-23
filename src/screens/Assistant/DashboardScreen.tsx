@@ -189,11 +189,11 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  // useEffect(() => {
-  //   if (userInfo?.access_token) {
-  //     fetchDashboardData();
-  //   }
-  // }, [userInfo?.access_token]);
+  useEffect(() => {
+    if (userInfo?.access_token) {
+      fetchDashboardData();
+    }
+  }, [userInfo?.access_token]);
 
   const onRefresh = () => {
     setRefreshing(true);
