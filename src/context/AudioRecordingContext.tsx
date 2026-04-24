@@ -6,9 +6,11 @@ import React, {
   useCallback,
 } from 'react';
 import {Alert, AppState, AppStateStatus} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {audioRecordingService} from '../services/AudioRecordingService';
 import {RecordingState, RecordingSession} from '../types';
 import {LocationContext} from './LocationContext';
+import {AuthContext} from './AuthContext';
 
 interface AudioRecordingContextType {
   recordingState: RecordingState;
@@ -44,6 +46,7 @@ export const AudioRecordingProvider: React.FC<{children: React.ReactNode}> = ({
     [],
   );
   const locationContext = useContext(LocationContext);
+  const {userInfo} = useContext(AuthContext) as any;
 
   const refreshRecordings = useCallback(async () => {
     const recordings = await audioRecordingService.getSavedRecordings();
@@ -85,6 +88,13 @@ export const AudioRecordingProvider: React.FC<{children: React.ReactNode}> = ({
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
         recoverState();
+      } else if (nextAppState === 'background') {
+        // Start background service only when app is actually backgrounded
+        audioRecordingService.getPersistedState().then(state => {
+          if (state?.isRecording) {
+            audioRecordingService.startBackgroundService().catch(() => {});
+          }
+        }).catch(() => {});
       }
     };
 
@@ -128,7 +138,24 @@ export const AudioRecordingProvider: React.FC<{children: React.ReactNode}> = ({
           }
         : null;
 
-      const filePath = await audioRecordingService.startRecording(locationInfo);
+      // Read directly from AsyncStorage — userInfo React state may not be populated yet
+      // if isLoggedIn() is still in progress or /verify failed on app open.
+      let parentEmail = userInfo?.user?.email || null;
+      let uploadedBy = userInfo?.user?.name || 'Parent';
+      if (!parentEmail) {
+        try {
+          const stored = await AsyncStorage.getItem('userInfo');
+          const parsed = stored ? JSON.parse(stored) : null;
+          parentEmail = parsed?.user?.email || null;
+          uploadedBy = parsed?.user?.name || 'Parent';
+        } catch {}
+      }
+
+      const filePath = await audioRecordingService.startRecording(
+        locationInfo,
+        parentEmail,
+        uploadedBy,
+      );
 
       setRecordingState({
         isRecording: true,

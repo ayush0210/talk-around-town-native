@@ -34,7 +34,7 @@ const ContentSelectionScreen: React.FC<ContentSelectionScreenProps> = ({
   const [contentAreas, setContentAreas] = useState<ContentArea[]>([
     {
       id: 'Language Development',
-      title: 'Language Development',
+      title: 'Language Skills',
       description:
         'Activities and tips that encourage vocabulary growth, communication skills, and language patterns.',
       icon: 'chat',
@@ -43,7 +43,7 @@ const ContentSelectionScreen: React.FC<ContentSelectionScreenProps> = ({
     },
     {
       id: 'Early Science Skills',
-      title: 'Early Science Skills',
+      title: 'Science Skills',
       description:
         'Explorations and experiments that nurture curiosity, critical thinking, and understanding of the world.',
       icon: 'science',
@@ -52,7 +52,7 @@ const ContentSelectionScreen: React.FC<ContentSelectionScreenProps> = ({
     },
     {
       id: 'Literacy Foundations',
-      title: 'Literacy Foundations',
+      title: 'Literacy Skills',
       description:
         'Reading and writing activities that build pre-literacy skills and foster a love for stories and books.',
       icon: 'menu-book',
@@ -61,7 +61,7 @@ const ContentSelectionScreen: React.FC<ContentSelectionScreenProps> = ({
     },
     {
       id: 'Social-Emotional Learning',
-      title: 'Social-Emotional Learning',
+      title: 'Social-Emotional Skills',
       description:
         'Guidance for developing emotional intelligence, relationship skills, and healthy self-awareness.',
       icon: 'people',

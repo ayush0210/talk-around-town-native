@@ -10,6 +10,13 @@ export interface UserInfo {
   number_of_children?: number;
   children?: number[];
   isAdmin?: boolean;
+  user?: {
+    id?: number;
+    name?: string;
+    email?: string;
+    recording?: boolean | number;
+    [key: string]: any;
+  };
 }
 
 export interface AuthContextType {

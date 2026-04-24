@@ -1913,11 +1913,12 @@ Try asking about one of these topics!`;
       }),
     );
 
-    // Build the final prompt like you already do
-    const prompt =
-      mentioned.length > 0
-        ? `${query} (Focus on: ${childContext}).`
-        : `${query}. Child context: ${childContext}.`;
+    // Build a structured prompt with labeled fields
+    const promptLines = [query];
+    if (childContext) {
+      promptLines.push(`Child: ${childContext}`);
+    }
+    const prompt = promptLines.join('\n');
 
     console.log('Setting isAssistantLoading=true before starting WebSocket');
     setIsAssistantLoading(true);
@@ -2293,7 +2294,7 @@ Try asking about one of these topics!`;
           value={searchText}
           onChangeText={setSearchText}
           placeholder={
-            isListening ? 'Listening...' : 'How can I help you today?'
+            isListening ? 'Listening...' : 'e.g., vocabulary tips for Jesse at the park'
           }
           placeholderTextColor="#9AA0A6"
           multiline
@@ -2988,147 +2989,55 @@ Try asking about one of these topics!`;
               elevation: 8,
             }}>
             {/* Header */}
-            <View style={{marginBottom: 16}}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 10,
-                }}>
-                <View
-                  style={{
-                    backgroundColor: '#EEF2FF',
-                    borderRadius: 12,
-                    padding: 10,
-                  }}>
+            <View style={{marginBottom: 20}}>
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12}}>
+                <View style={{backgroundColor: '#EEF2FF', borderRadius: 12, padding: 10}}>
                   <MaterialIcons name="tips-and-updates" size={26} color="#6366F1" />
                 </View>
-                <TouchableOpacity
-                  onPress={() => setShowHelperTip(false)}
-                  style={{padding: 4}}>
+                <TouchableOpacity onPress={() => setShowHelperTip(false)} style={{padding: 4}}>
                   <MaterialIcons name="close" size={24} color="#9AA0A6" />
                 </TouchableOpacity>
               </View>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: '700',
-                  color: '#111827',
-                  marginBottom: 4,
-                }}>
+              <Text style={{fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 4}}>
                 How to Ask for Tips
-              </Text>
-              <Text style={{fontSize: 13, color: '#6B7280', lineHeight: 18}}>
-                Describe what your child is doing and what skill you want to build. Tap an example to try it.
               </Text>
             </View>
 
-            {/* Tappable examples */}
+            {/* Format + examples */}
             {(() => {
-              const name = userChildren.length === 1 ? userChildren[0].nickname : 'my child';
+              const childName = userChildren.length === 1 ? userChildren[0].nickname : 'your child';
               const examples = [
-                {
-                  icon: 'record-voice-over',
-                  color: '#7C4DFF',
-                  bg: '#F3EEFF',
-                  text: `How can ${name} build vocabulary and learn to talk at the grocery store?`,
-                },
-                {
-                  icon: 'science',
-                  color: '#0891B2',
-                  bg: '#ECFEFF',
-                  text: `Ways for ${name} to explore and discover nature at the park`,
-                },
-                {
-                  icon: 'menu-book',
-                  color: '#059669',
-                  bg: '#ECFDF5',
-                  text: `How to make ${name} enjoy reading books and story time`,
-                },
-                {
-                  icon: 'emoji-emotions',
-                  color: '#D97706',
-                  bg: '#FFFBEB',
-                  text: `How to help ${name} develop empathy and social skills`,
-                },
+                {label: `Vocabulary tips for ${childName} at the grocery store`, icon: 'shopping-cart'},
+                {label: `Science tips for ${childName} at the park`, icon: 'park'},
+                {label: `Reading tips for ${childName} at the library`, icon: 'menu-book'},
+                {label: `Social skills tips for ${childName} during playtime`, icon: 'people'},
               ];
               return (
-                <View style={{gap: 8, marginBottom: 16}}>
+                <View style={{marginBottom: 20}}>
+                  <View style={{backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, marginBottom: 14}}>
+                    <Text style={{fontSize: 13, color: '#6B7280', marginBottom: 6}}>Use this format:</Text>
+                    <Text style={{fontSize: 15, fontWeight: '700', color: '#111827'}}>
+                      Give me tips for{' '}
+                      <Text style={{color: '#6366F1'}}>CHILD'S NAME</Text>
+                      {' '}for{' '}
+                      <Text style={{color: '#6366F1'}}>ACTIVITY</Text>
+                    </Text>
+                  </View>
+                  <Text style={{fontSize: 12, color: '#6B7280', marginBottom: 8, fontWeight: '500'}}>TAP AN EXAMPLE TO TRY IT</Text>
                   {examples.map((ex, i) => (
                     <TouchableOpacity
                       key={i}
                       activeOpacity={0.75}
-                      onPress={() => {
-                        setSearchText(ex.text);
-                        setShowHelperTip(false);
-                      }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: ex.bg,
-                        borderRadius: 12,
-                        padding: 12,
-                        gap: 10,
-                      }}>
-                      <MaterialIcons name={ex.icon as any} size={20} color={ex.color} />
-                      <Text style={{flex: 1, fontSize: 13, color: '#1F2937', lineHeight: 18}}>
-                        {ex.text}
-                      </Text>
-                      <MaterialIcons name="north-west" size={16} color={ex.color} />
+                      onPress={() => { setSearchText(ex.label); setShowHelperTip(false); }}
+                      style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 10, padding: 10, marginBottom: 6, gap: 10}}>
+                      <MaterialIcons name={ex.icon as any} size={18} color="#6366F1" />
+                      <Text style={{flex: 1, fontSize: 13, color: '#1F2937'}}>{ex.label}</Text>
+                      <MaterialIcons name="north-west" size={14} color="#6366F1" />
                     </TouchableOpacity>
                   ))}
                 </View>
               );
             })()}
-
-            {/* Content preferences tip */}
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => {
-                setShowHelperTip(false);
-                navigation.navigate('Settings');
-              }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#F0F9FF',
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 14,
-                borderWidth: 1,
-                borderColor: '#BAE6FD',
-                gap: 10,
-              }}>
-              <MaterialIcons name="tune" size={20} color="#0284C7" />
-              <View style={{flex: 1}}>
-                <Text style={{fontSize: 13, fontWeight: '600', color: '#0369A1'}}>
-                  Personalise your tips
-                </Text>
-                <Text style={{fontSize: 12, color: '#0284C7', marginTop: 2}}>
-                  Set your content preferences in Settings — the app will focus on those topics automatically.
-                </Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color="#0284C7" />
-            </TouchableOpacity>
-
-            {/* Not supported */}
-            <View style={{marginBottom: 20}}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: 6,
-                }}>
-                <MaterialIcons name="cancel" size={16} color="#EF4444" />
-                <Text style={{fontSize: 13, fontWeight: '600', color: '#EF4444', marginLeft: 5}}>
-                  Not supported
-                </Text>
-              </View>
-              <Text style={{fontSize: 12, color: '#9CA3AF', lineHeight: 18}}>
-                Sleep training · Potty training · General parenting advice · Behaviour/discipline
-              </Text>
-            </View>
 
             {/* Close Button */}
             <TouchableOpacity

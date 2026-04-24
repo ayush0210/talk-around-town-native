@@ -146,6 +146,8 @@ notifee.onBackgroundEvent(async ({type, detail}) => {
   console.log('📲 Notifee background event:', type, detail.notification?.id);
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
+    // Skip recording-related notifications — they don't navigate to tips
+    if (d.type === 'recording') return;
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
     console.log('📲 Notifee background press:', {title, body});
@@ -161,6 +163,8 @@ notifee.onBackgroundEvent(async ({type, detail}) => {
 notifee.onForegroundEvent(({type, detail}) => {
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
+    // Skip recording-related notifications — they don't navigate to tips
+    if (d.type === 'recording') return;
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
     console.log('📲 Notifee foreground press:', {title, body});
@@ -422,5 +426,9 @@ const headlessTask = async (event) => {
 
 // Register the headless task for Android
 BackgroundFetch.registerHeadlessTask(headlessTask);
+
+// Required by notifee to display foreground service notifications on Android.
+// The promise must stay pending for the duration of the foreground service.
+notifee.registerForegroundService(() => new Promise(() => {}));
 
 AppRegistry.registerComponent(appName, () => App);

@@ -27,6 +27,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {LayoutDashboard} from 'lucide-react-native';
 import LikedTipsModal from '../components/SettingsScreen/LikedTipsModal';
 import {BASE_URL} from '../config';
+import {useAudioRecording} from '../context/AudioRecordingContext';
 
 const API_ENDPOINTS = {
   BASE_URL: BASE_URL,
@@ -49,6 +50,7 @@ interface Tip {
 const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
   const {userInfo, logout, deleteAccount, isAdmin} =
     useContext<any>(AuthContext);
+  const {isRecording, startRecording, stopRecording, recordingDuration, formatDuration} = useAudioRecording();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showChildInfo, setShowChildInfo] = useState(false);
   const [selectedContentAreas, setSelectedContentAreas] = useState<string[]>(
@@ -772,6 +774,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
               </Pressable>
             </View>
 
+            {/* Session Recording - only visible if enabled on dashboard */}
+            {Boolean(userInfo?.user?.recording) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Session Recording</Text>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={isRecording ? stopRecording : startRecording}>
+                  <View style={styles.itemLeft}>
+                    <Ionicons
+                      name={isRecording ? 'mic' : 'mic-outline'}
+                      size={22}
+                      color={isRecording ? '#FF3B30' : '#6366F1'}
+                      style={styles.menuIcon}
+                    />
+                    <View style={styles.menuTextContainer}>
+                      <Text style={styles.menuText}>
+                        {isRecording ? 'Recording...' : 'Start Session Recording'}
+                      </Text>
+                      {isRecording && (
+                        <Text style={[styles.cacheSubtext, {color: '#FF3B30'}]}>
+                          {formatDuration(recordingDuration)} — tap to stop
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <Icon
+                    name={isRecording ? 'stop-circle' : 'chevron-right'}
+                    size={22}
+                    color={isRecording ? '#FF3B30' : '#1F2937'}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>App</Text>
 
@@ -912,6 +949,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
                 <Icon name="chevron-right" size={20} color="#1F2937" />
               </Pressable>
             </View>
+
 
             {/* Error banner for children info */}
             {childrenError && !isFromCache && (
@@ -1419,6 +1457,59 @@ const styles = StyleSheet.create({
 
   completedBadge: {
     marginLeft: 8,
+  },
+
+  featuresCard: {
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  featuresHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  featuresTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 12,
+  },
+  featureIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureTextWrap: {
+    flex: 1,
+  },
+  featureName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 3,
+  },
+  featureDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
   },
 });
 

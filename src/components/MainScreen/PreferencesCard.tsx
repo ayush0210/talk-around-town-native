@@ -16,7 +16,7 @@ const PREFS = [
     key: 'Language Development',
     icon: 'chat',
     title: 'Language',
-    sub: 'Development',
+    sub: 'Skills',
   },
   {
     key: 'Early Science Skills',
@@ -28,13 +28,13 @@ const PREFS = [
     key: 'Literacy Foundations',
     icon: 'menu-book',
     title: 'Literacy',
-    sub: 'Foundation',
+    sub: 'Skills',
   },
   {
     key: 'Social-Emotional Learning',
     icon: 'people',
     title: 'Social-Emotional',
-    sub: 'Learning',
+    sub: 'Skills',
   },
 ];
 

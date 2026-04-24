@@ -242,6 +242,7 @@ const TipsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   gradientBackground: {
     flex: 1,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 0 : 16,
+    paddingTop: 8,
     paddingBottom: 16,
     height: 60,
   },

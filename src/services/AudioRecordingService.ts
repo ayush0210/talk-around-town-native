@@ -1,20 +1,21 @@
 import AudioRecorderPlayer, {
   AudioEncoderAndroidType,
   AudioSourceAndroidType,
+  OutputFormatAndroidType,
 } from 'react-native-audio-recorder-player';
-import BackgroundActions from 'react-native-background-actions';
 import RNFS from 'react-native-fs';
 import {Platform, PermissionsAndroid} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee from '@notifee/react-native';
 import {RecordingSession} from '../types';
+import {BANIUM_BASE_URL} from '../config';
 
 const RECORDING_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const RECORDING_STATE_KEY = 'audio_recording_state';
 const SAVED_RECORDINGS_KEY = 'saved_recordings';
 
 // Demo mode - set to true for simulator/emulator testing
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 
 interface PersistedRecordingState {
   isRecording: boolean;
@@ -26,6 +27,8 @@ interface PersistedRecordingState {
     longitude: number;
     locationName?: string;
   } | null;
+  parentEmail?: string | null;
+  uploadedBy?: string;
 }
 
 class AudioRecordingService {
@@ -101,36 +104,6 @@ class AudioRecordingService {
       : `${RNFS.ExternalDirectoryPath || RNFS.DocumentDirectoryPath}/recordings`;
   }
 
-  private getBackgroundOptions() {
-    return {
-      taskName: 'AudioRecording',
-      taskTitle: 'Recording Audio',
-      taskDesc: 'ENACT is recording audio in the background',
-      taskIcon: {
-        name: 'ic_launcher',
-        type: 'mipmap',
-      },
-      color: '#3B82F6',
-      linkingURI: 'talkaroundtown://',
-      parameters: {
-        delay: 1000,
-      },
-    };
-  }
-
-  private backgroundTask = async (taskDataArguments?: {delay: number}) => {
-    const delay = taskDataArguments?.delay || 1000;
-
-    await new Promise<void>(resolve => {
-      const checkInterval = setInterval(async () => {
-        const state = await this.getPersistedState();
-        if (!state?.isRecording) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, delay);
-    });
-  };
 
   async startRecording(
     locationInfo?: {
@@ -138,6 +111,8 @@ class AudioRecordingService {
       longitude: number;
       locationName?: string;
     } | null,
+    parentEmail?: string | null,
+    uploadedBy?: string,
   ): Promise<string | null> {
     try {
       const hasPermission = await this.requestPermissions();
@@ -182,6 +157,7 @@ class AudioRecordingService {
         audioSet = {
           AudioEncoderAndroid: AudioEncoderAndroidType.AAC,
           AudioSourceAndroid: AudioSourceAndroidType.MIC,
+          OutputFormatAndroid: OutputFormatAndroidType.MPEG_4,
         };
       }
       // For iOS, use default settings (let the library handle it)
@@ -217,11 +193,25 @@ class AudioRecordingService {
           }
         });
 
-        // Start background actions to keep the recording alive
-        await BackgroundActions.start(
-          this.backgroundTask,
-          this.getBackgroundOptions(),
-        );
+        // Keep Android foreground service alive during recording
+        if (Platform.OS === 'android') {
+          const channelId = await notifee.createChannel({
+            id: 'recording-active',
+            name: 'Recording',
+          });
+          await notifee.displayNotification({
+            id: 'recording-active',
+            title: 'Recording in progress',
+            body: 'ENACT is recording your session.',
+            data: {type: 'recording'},
+            android: {
+              channelId,
+              smallIcon: 'ic_launcher',
+              ongoing: true,
+              asForegroundService: true,
+            },
+          });
+        }
       }
 
       const sessionId = `session_${Date.now()}`;
@@ -231,6 +221,8 @@ class AudioRecordingService {
         filePath,
         startTime: Date.now(),
         location: locationInfo || null,
+        parentEmail: parentEmail || null,
+        uploadedBy: uploadedBy || 'Parent',
       };
       await this.persistState(state);
 
@@ -244,6 +236,10 @@ class AudioRecordingService {
       await this.cleanup();
       throw error;
     }
+  }
+
+  async startBackgroundService(): Promise<void> {
+    // BackgroundActions removed — audio recorder handles background natively
   }
 
   async stopRecording(): Promise<string | null> {
@@ -263,7 +259,11 @@ class AudioRecordingService {
       } else {
         result = await this.audioRecorderPlayer.stopRecorder();
         this.audioRecorderPlayer.removeRecordBackListener();
-        await BackgroundActions.stop();
+      }
+
+      if (Platform.OS === 'android') {
+        await notifee.stopForegroundService();
+        await notifee.cancelNotification('recording-active');
       }
 
       const state = await this.getPersistedState();
@@ -282,6 +282,16 @@ class AudioRecordingService {
 
         await this.saveRecordingSession(session);
         await this.showCompletionNotification(duration);
+
+        // Upload to Banium research backend if parent email is available
+        if (state.parentEmail && !DEMO_MODE) {
+          this.uploadToBanium(
+            state.filePath,
+            state.parentEmail,
+            state.uploadedBy || 'Parent',
+            state.startTime,
+          ).catch(e => console.error('Banium upload error:', e));
+        }
       }
 
       await this.clearPersistedState();
@@ -289,6 +299,131 @@ class AudioRecordingService {
       return result;
     } catch (error) {
       console.error('Failed to stop recording:', error);
+      throw error;
+    }
+  }
+
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeoutMs: number,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, {...options, signal: controller.signal});
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Render free tier spins down after 15 min. Ping a lightweight endpoint first
+  // and wait up to 60s for it to wake before sending the heavy audio payload.
+  private async warmUpBanium(): Promise<void> {
+    const MAX_WAIT_MS = 90_000;
+    const POLL_INTERVAL_MS = 3_000;
+    const start = Date.now();
+    console.log('Banium: warming up server...');
+    while (Date.now() - start < MAX_WAIT_MS) {
+      try {
+        const res = await this.fetchWithTimeout(
+          `${BANIUM_BASE_URL}/health`,
+          {method: 'GET'},
+          5_000,
+        );
+        if (res.ok || res.status < 500) {
+          console.log(`Banium: server warm (${Date.now() - start}ms)`);
+          return;
+        }
+      } catch {
+        // still waking up
+      }
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    }
+    console.warn('Banium: warm-up timed out, proceeding anyway');
+  }
+
+  private async uploadToBanium(
+    filePath: string,
+    parentEmail: string,
+    uploadedBy: string,
+    startTime: number,
+  ): Promise<void> {
+    const fileExists = await RNFS.exists(filePath);
+    if (!fileExists) {
+      console.warn('Banium upload skipped: file not found at', filePath);
+      return;
+    }
+
+    const channelId = await notifee.createChannel({
+      id: 'banium-upload',
+      name: 'Research Upload',
+    });
+
+    await notifee.displayNotification({
+      id: 'banium-upload',
+      title: 'Uploading for analysis...',
+      body: 'Your session recording is being sent for research analysis.',
+      data: {type: 'recording'},
+      android: {channelId, smallIcon: 'ic_launcher', ongoing: true},
+    });
+
+    try {
+      await this.warmUpBanium();
+
+      const buildFormData = () => {
+        const formData = new FormData();
+        formData.append('audio', {
+          uri: Platform.OS === 'android' ? `file://${filePath}` : filePath,
+          type: 'audio/m4a',
+          name: `recording_${startTime}.m4a`,
+        } as any);
+        formData.append('parentEmail', parentEmail);
+        formData.append('uploadedBy', uploadedBy);
+        formData.append('recordingDate', new Date(startTime).toISOString());
+        return formData;
+      };
+
+      const SUBMIT_TIMEOUT_MS = 300_000; // 5 min — covers cold start + RevAI transcription
+      let response: Response;
+      try {
+        console.log('Banium: submitting ENACT recording (attempt 1)');
+        response = await this.fetchWithTimeout(
+          `${BANIUM_BASE_URL}/api/integrations/enact/submit`,
+          {method: 'POST', body: buildFormData()},
+          SUBMIT_TIMEOUT_MS,
+        );
+      } catch (firstErr: any) {
+        console.warn('Banium submit attempt 1 failed, retrying:', firstErr?.message);
+        await new Promise(r => setTimeout(r, 15000));
+        console.log('Banium: submitting ENACT recording (attempt 2)');
+        response = await this.fetchWithTimeout(
+          `${BANIUM_BASE_URL}/api/integrations/enact/submit`,
+          {method: 'POST', body: buildFormData()},
+          SUBMIT_TIMEOUT_MS,
+        );
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Submit failed: ${response.status}`);
+      }
+
+      await notifee.cancelNotification('banium-upload');
+      await notifee.displayNotification({
+        title: 'Analysis Complete',
+        body: 'Your session has been processed for research.',
+        data: {type: 'recording'},
+        android: {channelId, smallIcon: 'ic_launcher'},
+      });
+    } catch (error: any) {
+      await notifee.cancelNotification('banium-upload');
+      await notifee.displayNotification({
+        title: 'Upload Failed',
+        body: 'Could not send recording for analysis. It is saved locally.',
+        data: {type: 'recording'},
+        android: {channelId, smallIcon: 'ic_launcher'},
+      });
       throw error;
     }
   }
@@ -354,6 +489,7 @@ class AudioRecordingService {
     await notifee.displayNotification({
       title: 'Recording Complete',
       body: `Your ${durationText} audio recording has been saved.`,
+      data: {type: 'recording'},
       android: {
         channelId,
         smallIcon: 'ic_launcher',
@@ -386,10 +522,6 @@ class AudioRecordingService {
     }
     if (DEMO_MODE) {
       this.stopDemoRecording();
-    } else {
-      try {
-        await BackgroundActions.stop();
-      } catch {}
     }
   }
 

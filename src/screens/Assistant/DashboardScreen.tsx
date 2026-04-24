@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  Platform,
   Dimensions,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,6 +21,7 @@ import {AuthContext, AuthContextType} from '../../context/AuthContext';
 import {Alert, Share} from 'react-native';
 import {BASE_URL} from '../../config';
 import RNFS from 'react-native-fs';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface DashboardData {
   summary: {
@@ -73,14 +76,38 @@ const DashboardScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSheets, setExportSheets] = useState({
+    users: true,
+    children: true,
+    locations: true,
+    notifications: true,
+  });
+  const [exportDateFrom, setExportDateFrom] = useState<Date | null>(null);
+  const [exportDateTo, setExportDateTo] = useState<Date | null>(null);
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
   const {isAdmin} = useContext(AuthContext);
 
   const exportToExcel = async () => {
+    setShowExportModal(false);
+    const selected = Object.entries(exportSheets)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    if (selected.length === 0) {
+      Alert.alert('No Data Selected', 'Please select at least one sheet to export.');
+      return;
+    }
     try {
       setIsExporting(true);
-      const response = await fetch(`${API_BASE_URL}/api/admin/export/excel`, {
-        headers: {Authorization: `Bearer ${userInfo.access_token}`},
-      });
+      const params = new URLSearchParams();
+      params.append('sheets', selected.join(','));
+      if (exportDateFrom) params.append('dateFrom', exportDateFrom.toISOString().split('T')[0]);
+      if (exportDateTo) params.append('dateTo', exportDateTo.toISOString().split('T')[0]);
+      const response = await fetch(
+        `${API_BASE_URL}/api/admin/export/excel?${params.toString()}`,
+        {headers: {Authorization: `Bearer ${userInfo.access_token}`}},
+      );
       if (!response.ok) throw new Error('Export request failed');
       const {data, filename} = await response.json();
       const path = `${RNFS.DocumentDirectoryPath}/${filename}`;
@@ -92,6 +119,10 @@ const DashboardScreen: React.FC = () => {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const toggleSheet = (key: keyof typeof exportSheets) => {
+    setExportSheets(prev => ({...prev, [key]: !prev[key]}));
   };
   useEffect(() => {
     if (!isAdmin) {
@@ -837,7 +868,7 @@ const DashboardScreen: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.exportButton}
-              onPress={exportToExcel}
+              onPress={() => setShowExportModal(true)}
               disabled={isExporting}>
               {isExporting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -974,6 +1005,99 @@ const DashboardScreen: React.FC = () => {
           {activeTab === 'notifications' && renderNotificationsTab()}
         </View>
       </ScrollView>
+
+      {/* Export Filter Modal */}
+      <Modal visible={showExportModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.exportModal}>
+            <Text style={styles.exportModalTitle}>Export Options</Text>
+
+            <Text style={styles.exportSectionLabel}>Include Sheets</Text>
+            {(['users', 'children', 'locations', 'notifications'] as const).map(key => (
+              <TouchableOpacity
+                key={key}
+                style={styles.exportCheckRow}
+                onPress={() => toggleSheet(key)}>
+                <Icon
+                  name={exportSheets[key] ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color="#4A90E2"
+                />
+                <Text style={styles.exportCheckLabel}>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <Text style={styles.exportSectionLabel}>Date Range (optional)</Text>
+            <Text style={styles.exportDateHint}>Filters Users (registered) and Notifications</Text>
+            <View style={styles.exportDateRow}>
+              <View style={styles.exportDateField}>
+                <Text style={styles.exportDateFieldLabel}>From</Text>
+                <TouchableOpacity
+                  style={styles.exportDateInput}
+                  onPress={() => setShowFromPicker(true)}>
+                  <Text style={exportDateFrom ? styles.exportDateValue : styles.exportDatePlaceholder}>
+                    {exportDateFrom ? exportDateFrom.toLocaleDateString() : 'Any date'}
+                  </Text>
+                  <Icon name="calendar-today" size={16} color="#888" />
+                </TouchableOpacity>
+                {exportDateFrom && (
+                  <TouchableOpacity onPress={() => setExportDateFrom(null)}>
+                    <Text style={styles.exportDateClear}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.exportDateField}>
+                <Text style={styles.exportDateFieldLabel}>To</Text>
+                <TouchableOpacity
+                  style={styles.exportDateInput}
+                  onPress={() => setShowToPicker(true)}>
+                  <Text style={exportDateTo ? styles.exportDateValue : styles.exportDatePlaceholder}>
+                    {exportDateTo ? exportDateTo.toLocaleDateString() : 'Any date'}
+                  </Text>
+                  <Icon name="calendar-today" size={16} color="#888" />
+                </TouchableOpacity>
+                {exportDateTo && (
+                  <TouchableOpacity onPress={() => setExportDateTo(null)}>
+                    <Text style={styles.exportDateClear}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            {showFromPicker && (
+              <DateTimePicker
+                value={exportDateFrom || new Date()}
+                mode="date"
+                display="default"
+                onChange={(_, date) => { setShowFromPicker(false); if (date) setExportDateFrom(date); }}
+              />
+            )}
+            {showToPicker && (
+              <DateTimePicker
+                value={exportDateTo || new Date()}
+                mode="date"
+                display="default"
+                onChange={(_, date) => { setShowToPicker(false); if (date) setExportDateTo(date); }}
+              />
+            )}
+
+            <View style={styles.exportModalActions}>
+              <TouchableOpacity
+                style={styles.exportCancelBtn}
+                onPress={() => setShowExportModal(false)}>
+                <Text style={styles.exportCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exportConfirmBtn}
+                onPress={exportToExcel}>
+                <Icon name="file-download" size={18} color="#fff" />
+                <Text style={styles.exportConfirmText}>Export</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -982,6 +1106,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   headerGradient: {
     paddingBottom: 16,
@@ -1255,6 +1380,116 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  exportModal: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  exportModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 20,
+  },
+  exportSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  exportCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  exportCheckLabel: {
+    fontSize: 15,
+    color: '#333',
+  },
+  exportDateHint: {
+    fontSize: 12,
+    color: '#aaa',
+    marginBottom: 8,
+  },
+  exportDateRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  exportDateField: {
+    flex: 1,
+  },
+  exportDateFieldLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+  },
+  exportDateInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  exportDateValue: {
+    fontSize: 14,
+    color: '#333',
+  },
+  exportDatePlaceholder: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  exportDateClear: {
+    fontSize: 12,
+    color: '#4A90E2',
+    marginTop: 4,
+  },
+  exportModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  exportCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  exportCancelText: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '600',
+  },
+  exportConfirmBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  exportConfirmText: {
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 export default DashboardScreen;
