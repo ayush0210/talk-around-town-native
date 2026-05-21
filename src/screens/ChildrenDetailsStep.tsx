@@ -49,7 +49,7 @@ const ChildrenDetailsStep: React.FC<ChildrenDetailsStepProps> = ({
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
 
-        
+
 
         <Text style={styles.stepTitle}>Children Details</Text>
         <Text style={styles.stepDescription}>Enter details for each child</Text>

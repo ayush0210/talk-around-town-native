@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {Platform, StyleSheet, Text, TextInput, View} from 'react-native';
 import {v4 as uuidv4} from 'uuid';
 
 interface ChildDetail {
@@ -34,7 +34,7 @@ const NumberOfChildren = ({
 
     setChildrenDetails(prevDetails => {
       const toAdd = Math.max(0, num - prevDetails.length);
-      if (toAdd <= 0) return prevDetails.slice(0, num);
+      if (toAdd <= 0) {return prevDetails.slice(0, num);}
 
       const newItems: ChildDetail[] = Array.from({length: toAdd}, () => ({
         id: uuidv4(),
@@ -49,7 +49,7 @@ const NumberOfChildren = ({
   return (
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
-        <RenderBackButton />
+        {RenderBackButton()}
 
         <View style={{flexDirection: 'column', alignItems: 'center'}}>
           <Text style={styles.stepTitle}>Family Information</Text>
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   childrenCountInput: {
     textAlign: 'center',
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 22, default: 22}),
     fontWeight: '500',
   },
   stepContainer: {
@@ -96,16 +96,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 22, default: 22}),
     fontWeight: 'bold',
     color: '#333333',
     marginBottom: 6,
   },
   stepDescription: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
     color: '#666666',
     marginBottom: 6,
     flexWrap: 'wrap',
@@ -114,11 +114,11 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    height: 50,
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#1F2937',
   },
 });

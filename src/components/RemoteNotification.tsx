@@ -60,7 +60,7 @@ const RemoteNotification: React.FC = () => {
         });
         const responseData = await response.json();
         console.log('[RemoteNotification] Server response:', response.ok, responseData);
-        if (!response.ok) throw new Error('Failed to update token on server');
+        if (!response.ok) {throw new Error('Failed to update token on server');}
       } else {
         console.log('[RemoteNotification] Missing access_token or FCM token, skipping server update');
       }
@@ -136,7 +136,7 @@ const RemoteNotification: React.FC = () => {
       });
 
       if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+        {throw new Error(`HTTP error! status: ${response.status}`);}
 
       const result = await response.json();
       console.log('[RemoteNotification] Location response:', result);
@@ -205,7 +205,7 @@ const RemoteNotification: React.FC = () => {
         notifee.onForegroundEvent(({type, detail}) => {
           if (type === EventType.PRESS) {
             const now = Date.now();
-            if (now - lastPressTime.current < 1000) return;
+            if (now - lastPressTime.current < 1000) {return;}
             lastPressTime.current = now;
             console.log('Notification pressed:', detail.notification);
           }
@@ -303,7 +303,7 @@ const RemoteNotification: React.FC = () => {
       }
     };
 
-    if (userInfo?.access_token) setup();
+    if (userInfo?.access_token) {setup();}
 
     return () => {
       if (locationIntervalRef.current) {

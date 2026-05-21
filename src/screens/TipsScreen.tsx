@@ -38,7 +38,7 @@ const TipsScreen = () => {
   const route = useRoute<RouteProp<TipsScreenRouteParams, 'params'>>();
   const fadeAnim = useState(new Animated.Value(0))[0];
   const slideAnim = useState(new Animated.Value(50))[0];
-  
+
   // Get category icon - fallback to default if not provided
   const getCategoryIcon = (category?: string) => {
     switch(category?.toLowerCase()) {
@@ -58,7 +58,7 @@ const TipsScreen = () => {
         return 'bulb';
     }
   };
-  
+
   // Get gradient colors based on category
   const getCategoryGradient = (category?: string) => {
     switch(category?.toLowerCase()) {
@@ -86,11 +86,11 @@ const TipsScreen = () => {
     tipCategory?: string;
     tipImage?: string;
   };
-  
+
   const [tipData, setTipData] = useState<TipData | null>(null);
 
   const handleShare = async () => {
-    if (!tipData) return;
+    if (!tipData) {return;}
 
     try {
       const shareMessage = `${tipData.title}\n\n${tipData.message}\n\nShared from ENACT App`;
@@ -109,7 +109,7 @@ const TipsScreen = () => {
     if (route.params?.notificationData) {
       console.log('TipsScreen received notification data:', route.params.notificationData);
       setTipData(route.params.notificationData);
-      
+
       // Animate the content in
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -121,7 +121,7 @@ const TipsScreen = () => {
           toValue: 0,
           duration: 600,
           useNativeDriver: true,
-        })
+        }),
       ]).start();
     } else {
       // If no notification data and this screen is accessed directly, go back
@@ -129,7 +129,7 @@ const TipsScreen = () => {
       navigation.goBack();
     }
   }, [route.params, fadeAnim, slideAnim, navigation]);
-  
+
   // If no tip data is available, show loading placeholder
   // This will be brief as we navigate back if no data is found
   if (!tipData) {
@@ -138,7 +138,7 @@ const TipsScreen = () => {
         <StatusBar barStyle="light-content" />
         <LinearGradient colors={['#4A90E2', '#357ABD']} style={styles.gradientBackground}>
           <View style={styles.headerContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
@@ -156,23 +156,23 @@ const TipsScreen = () => {
       </SafeAreaView>
     );
   }
-  
+
   // Determine which gradient colors to use based on tip category
   const gradientColors = getCategoryGradient(tipData.tipCategory);
-  
+
   // Determine which icon to use based on tip category
   const categoryIcon = getCategoryIcon(tipData.tipCategory);
-  
+
   // Default image if none is provided
   const defaultImage = 'https://images.unsplash.com/photo-1591348278900-019a172a3377?q=80&w=2787&auto=format&fit=crop';
-  
+
   // Display the tip information with a nicer UI
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={gradientColors} style={styles.gradientBackground}>
         <View style={styles.headerContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -181,24 +181,24 @@ const TipsScreen = () => {
           <Text style={styles.headerTitle}>Parenting Tip</Text>
           <View style={styles.placeholderView} />
         </View>
-        
-        <ScrollView 
-          style={styles.scrollView} 
+
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.imageContainer, 
+              styles.imageContainer,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
           >
-            <Image 
-              source={{ uri: tipData.tipImage || defaultImage }} 
-              style={styles.tipImage} 
+            <Image
+              source={{ uri: tipData.tipImage || defaultImage }}
+              style={styles.tipImage}
               resizeMode="cover"
             />
             <View style={styles.categoryBadge}>
@@ -206,26 +206,26 @@ const TipsScreen = () => {
               <Text style={styles.categoryText}>{tipData.tipCategory || 'Tip'}</Text>
             </View>
           </Animated.View>
-          
-          <Animated.View 
+
+          <Animated.View
             style={[
               styles.tipContainer,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
           >
             <Text style={styles.tipTitle}>{tipData.title}</Text>
             <Text style={styles.tipMessage}>{tipData.message}</Text>
-            
+
             {/* {tipData.tipDetail && (
               <View style={styles.tipDetailContainer}>
                 <Text style={styles.tipDetailHeading}>More Information</Text>
                 <Text style={styles.tipDetail}>{tipData.tipDetail}</Text>
               </View>
             )} */}
-            
+
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                 <Ionicons name="share-social-outline" size={22} color="#4A90E2" />
@@ -251,19 +251,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    height: 60,
+    paddingHorizontal: Platform.select({ios: 16, android: 14, default: 14}),
+    paddingTop: Platform.select({ios: 8, android: 6, default: 6}),
+    paddingBottom: Platform.select({ios: 16, android: 10, default: 10}),
+    height: Platform.select({ios: 60, android: 52, default: 52}),
   },
   backButton: {
-    padding: 8,
+    padding: Platform.select({ios: 8, android: 6, default: 6}),
   },
   placeholderView: {
     width: 40,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -275,8 +275,8 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: width,
-    height: 200,
-    marginBottom: 20,
+    height: Platform.select({ios: 200, android: 170, default: 170}),
+    marginBottom: Platform.select({ios: 20, android: 14, default: 14}),
   },
   tipImage: {
     width: '100%',
@@ -303,50 +303,50 @@ const styles = StyleSheet.create({
   },
   tipContainer: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    paddingHorizontal: 20,
-    paddingTop: 25,
-    paddingBottom: 30,
-    marginTop: -20,
+    borderTopLeftRadius: Platform.select({ios: 25, android: 20, default: 20}),
+    borderTopRightRadius: Platform.select({ios: 25, android: 20, default: 20}),
+    paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
+    paddingTop: Platform.select({ios: 25, android: 18, default: 18}),
+    paddingBottom: Platform.select({ios: 30, android: 24, default: 24}),
+    marginTop: Platform.select({ios: -20, android: -16, default: -16}),
     minHeight: 500,
   },
   tipTitle: {
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 20, default: 20}),
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     color: '#333',
   },
   tipMessage: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 20,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
+    lineHeight: Platform.select({ios: 24, android: 20, default: 20}),
+    marginBottom: Platform.select({ios: 20, android: 14, default: 14}),
     color: '#444',
   },
   tipDetailContainer: {
     backgroundColor: '#F9F9FB',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    marginBottom: Platform.select({ios: 24, android: 16, default: 16}),
   },
   tipDetailHeading: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     marginBottom: 8,
     color: '#333',
   },
   tipDetail: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: Platform.select({ios: 15, android: 13, default: 13}),
+    lineHeight: Platform.select({ios: 22, android: 19, default: 19}),
     color: '#555',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
+    paddingVertical: Platform.select({ios: 20, android: 14, default: 14}),
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
-    marginBottom: 20,
+    marginBottom: Platform.select({ios: 20, android: 14, default: 14}),
   },
   actionButton: {
     alignItems: 'center',

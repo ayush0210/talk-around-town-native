@@ -9,7 +9,7 @@ BackgroundFetch.configure(
     },
     async taskID => {
       // Perform background tasks here
-      
+
       // await fetchLocationAndSendData();
       BackgroundFetch.finish(taskID);
     },

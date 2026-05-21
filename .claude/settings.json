@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(32\\).toString\\(''hex''\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST \"https://bainum-frontend-prod.vercel.app/api/integrations/assessments/by-parent-email\" -H \"Content-Type: application/json\" -H \"X-Api-Key: test\" -d '{\"\"parentEmail\"\": \"\"test@test.com\"\", \"\"assessment\"\": {\"\"scienceTalk\"\": 0}}')",
+      "Bash(curl -s -X POST \"https://bainum-frontend-prod.vercel.app/api/integrations/assessments/by-parent-email\" -H \"Content-Type: application/json\" -H \"X-Api-Key: test\" -d '{\"\"parentEmail\"\": \"\"test@test.com\"\", \"\"assessment\"\": {\"\"scienceTalk\"\": 0}}')",
+      "Bash(curl -s -X POST \"https://bainum-project-backend.onrender.com/api/integrations/assessments/by-parent-email\" -H \"Content-Type: application/json\" -H \"X-Api-Key: 2c0dd623e359d22d6884af9747643c56\" -d '{\"\"parentEmail\"\": \"\"test@test.com\"\", \"\"assessment\"\": {\"\"scienceTalk\"\": 0, \"\"socialTalk\"\": 0, \"\"literatureTalk\"\": 0, \"\"languageDevelopment\"\": 0}}')",
+      "Bash(curl -s -X POST \"https://bainum-project-backend.onrender.com/api/integrations/assessments/by-parent-email\" -H \"Content-Type: application/json\" -H \"X-Api-Key: 2c0dd623e359d22d6884af9747643c56\" -d '{\"\"parentEmail\"\": \"\"test@test.com\"\", \"\"assessment\"\": {\"\"scienceTalk\"\": 1, \"\"socialTalk\"\": 2, \"\"literatureTalk\"\": 0, \"\"languageDevelopment\"\": 1, \"\"transcript\"\": \"\"test transcript\"\"}}')",
+      "Bash(curl -s -X POST \"https://bainum-project-backend.onrender.com/api/whisper\")",
+      "Bash(curl -s -X POST \"https://bainum-project-backend.onrender.com/api/whisper\" -F \"uploadedBy=test\" -F \"recordingDate=2026-04-16T18:00:00.000Z\")",
+      "Bash(git remote *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}; [print\\(k,v\\) for k,v in deps.items\\(\\) if 'share' in k.lower\\(\\) or 'rnfs' in k.lower\\(\\) or 'fs' in k.lower\\(\\)]\")",
+      "Bash(python3 -c ' *)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native log --oneline -5)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native status --short)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native diff --stat HEAD)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native diff HEAD -- src/screens/MainScreen.tsx)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native diff HEAD -- src/components/MainScreen/TipsModal.tsx)",
+      "Bash(git -C /Users/ayushmishra/Desktop/talk-around-town-native diff HEAD -- src/components/MainScreen/PreferencesCard.tsx)",
+      "Bash(python3 -c \"import docx\")",
+      "Bash(python3)",
+      "Bash(python3 -c \"import docx; print\\('ok'\\)\")",
+      "Bash(/opt/homebrew/bin/python3 -c \"import docx; print\\('ok'\\)\")",
+      "Bash(/opt/homebrew/bin/python3)"
+    ]
+  }
+}

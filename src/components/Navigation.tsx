@@ -110,6 +110,12 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 
+const smoothStackOptions = {
+  headerShown: false,
+  animation: 'slide_from_right' as const,
+  animationDuration: Platform.OS === 'android' ? 220 : undefined,
+};
+
 // Icon configuration
 const getIconName = (routeName: string, focused: boolean): string => {
   switch (routeName) {
@@ -152,7 +158,7 @@ const TabNavigator = () => (
 // Auth Navigator
 const AuthNavigator = () => (
   <ScreenWithNotification>
-    <AuthStack.Navigator screenOptions={{headerShown: false}}>
+    <AuthStack.Navigator screenOptions={smoothStackOptions}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen
         name="ForgotPassword"
@@ -172,7 +178,7 @@ const RootNavigator = () => {
   // Render different navigator configurations based on app state
   if (splashLoading) {
     return (
-      <RootStack.Navigator screenOptions={{headerShown: false}}>
+      <RootStack.Navigator screenOptions={smoothStackOptions}>
         <RootStack.Screen name="Splash" component={SplashScreen} />
       </RootStack.Navigator>
     );
@@ -180,7 +186,7 @@ const RootNavigator = () => {
 
   if (userInfo.access_token) {
     return (
-      <RootStack.Navigator screenOptions={{headerShown: false}}>
+      <RootStack.Navigator screenOptions={smoothStackOptions}>
         <RootStack.Screen name="Main" component={TabNavigator} />
         <RootStack.Screen name="LocationList" component={LocationListScreen} />
         <RootStack.Screen name="Settings" component={SettingsScreen} />
@@ -213,7 +219,7 @@ const RootNavigator = () => {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{headerShown: false}}>
+    <RootStack.Navigator screenOptions={smoothStackOptions}>
       <RootStack.Screen name="Auth" component={AuthNavigator} />
     </RootStack.Navigator>
   );

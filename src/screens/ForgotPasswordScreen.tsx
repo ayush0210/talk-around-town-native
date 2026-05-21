@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
 
   // optional: tighten title's bottom spacing since subtitle sits right under it
   title: {
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 22, default: 22}),
     fontWeight: 'bold',
     color: '#333333',
     textAlign: 'center',
@@ -220,14 +220,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
   },
   formContainer: {
     width: '100%',
     maxWidth: 400,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: Platform.select({ios: 20, android: 16, default: 16}),
+    padding: Platform.select({ios: 24, android: 18, default: 18}),
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
@@ -235,13 +235,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
     color: '#666666',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Platform.select({ios: 24, android: 18, default: 18}),
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: Platform.select({ios: 20, android: 14, default: 14}),
   },
   inputLabel: {
     fontSize: 14,
@@ -253,10 +253,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    paddingVertical: Platform.select({ios: 12, android: 9, default: 9}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#333333',
   },
   inputError: {

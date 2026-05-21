@@ -7,12 +7,19 @@ import {
   StatusBar,
   TouchableOpacity,
   Alert,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {NavigationProp} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 interface ContentSelectionScreenProps {
   navigation: NavigationProp<any>;
@@ -102,6 +109,7 @@ const ContentSelectionScreen: React.FC<ContentSelectionScreenProps> = ({
     console.log(id, area);
 
     if (area && area.available) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setContentAreas(
         contentAreas.map(area =>
           area.id === id ? {...area, selected: !area.selected} : area,
@@ -313,13 +321,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
   },
   backButton: {
-    padding: 8,
+    padding: Platform.select({ios: 8, android: 6, default: 6}),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: Platform.select({ios: 20, android: 18, default: 18}),
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -329,19 +337,19 @@ const styles = StyleSheet.create({
   border: {
     borderBottomColor: 'rgba(255, 255, 255, 0.8)',
     borderBottomWidth: 1,
-    marginVertical: 12,
+    marginVertical: Platform.select({ios: 12, android: 8, default: 8}),
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: Platform.select({ios: 30, android: 24, default: 24}),
   },
   contentContainer: {
-    padding: 20,
+    padding: Platform.select({ios: 20, android: 14, default: 14}),
     backgroundColor: '#FFFFFF',
-    margin: 16,
-    borderRadius: 16,
+    margin: Platform.select({ios: 16, android: 14, default: 14}),
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -352,16 +360,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   tagline: {
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 20, default: 20}),
     fontWeight: 'bold',
     color: '#333333',
-    marginBottom: 12,
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
   },
   description: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#666666',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: Platform.select({ios: 22, android: 20, default: 20}),
+    marginBottom: Platform.select({ios: 24, android: 16, default: 16}),
   },
   betaBadgeContainer: {
     flexDirection: 'row',
@@ -390,16 +398,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectionStatus: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
     color: '#666666',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     textAlign: 'center',
   },
   contentAreaItem: {
     backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
+    marginBottom: Platform.select({ios: 12, android: 10, default: 10}),
     borderWidth: 1,
     borderColor: '#EAEAEA',
   },
@@ -415,22 +423,22 @@ const styles = StyleSheet.create({
   contentAreaHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Platform.select({ios: 8, android: 6, default: 6}),
   },
   contentIcon: {
-    marginRight: 12,
+    marginRight: Platform.select({ios: 12, android: 10, default: 10}),
   },
   contentAreaTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#333333',
   },
   contentAreaDescription: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
     color: '#666666',
-    lineHeight: 20,
-    paddingLeft: 40, // Align with title after icon
+    lineHeight: Platform.select({ios: 20, android: 18, default: 18}),
+    paddingLeft: Platform.select({ios: 40, android: 34, default: 34}),
   },
   selectedText: {
     color: '#FFFFFF',
@@ -447,8 +455,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   ctaGradient: {
-    height: 44,
-    borderRadius: 12,
+    height: Platform.select({ios: 44, android: 40, default: 40}),
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -457,11 +465,11 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     fontWeight: '600',
   },
   footerNote: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
     color: '#999999',
     textAlign: 'center',
   },

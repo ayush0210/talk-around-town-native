@@ -41,8 +41,10 @@ export interface AuthContextType {
   ) => Promise<boolean>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  deleteAccount: () => Promise<boolean>; // Added deleteAccount function
+  deleteAccount: () => Promise<boolean>;
   setAITips: React.Dispatch<React.SetStateAction<boolean>>;
+  // Returns a guaranteed-fresh access token, refreshing silently if needed.
+  getValidToken: () => Promise<string>;
 }
 
 export const AuthContext = createContext<AuthContextType>(
@@ -242,6 +244,55 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
     }
   };
 
+  // Decode the expiry from a JWT without a library (JWT payload is base64url JSON).
+  const getTokenExpiry = (token: string): number => {
+    try {
+      const part = token.split('.')[1];
+      // base64url → base64
+      const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(b64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(''),
+      );
+      return JSON.parse(json).exp ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  // Returns a valid access token, refreshing silently when it expires within 60 s.
+  const getValidToken = async (): Promise<string> => {
+    const stored = await AsyncStorage.getItem('userInfo');
+    if (!stored) {throw new Error('Not authenticated');}
+
+    const info = JSON.parse(stored) as UserInfo;
+    const token = info.access_token;
+    if (!token) {throw new Error('No access token');}
+
+    const exp = getTokenExpiry(token);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    if (exp - nowSec > 60) {
+      // Token still valid for more than 60 s — use as-is.
+      return token;
+    }
+
+    // Token expired or expiring soon — try to refresh.
+    if (!info.refresh_token) {throw new Error('No refresh token');}
+
+    const res = await axios.post(`${BASE_URL}/api/auth/refresh`, {
+      refresh_token: info.refresh_token,
+    });
+
+    const {access_token} = res.data;
+    const updated = {...info, access_token};
+    await AsyncStorage.setItem('userInfo', JSON.stringify(updated));
+    setUserInfo(updated);
+    return access_token;
+  };
+
   const isLoggedIn = async () => {
     try {
       setSplashLoading(true);
@@ -283,10 +334,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         register,
         login,
         logout,
-        deleteAccount, // Added deleteAccount function to the context
+        deleteAccount,
         aiTips,
         setAITips,
         isAdmin,
+        getValidToken,
       }}>
       {children}
     </AuthContext.Provider>

@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,7 +18,8 @@ import {BASE_URL} from '../config';
 interface Child {
   id: number;
   nickname?: string;
-  age: number;
+  age?: number;
+  date_of_birth?: string;
 }
 
 interface NewChild {
@@ -64,7 +66,7 @@ const ChildInfoModal: React.FC<ChildInfoModalProps> = ({
   };
 
   const handleUpdate = async () => {
-    if (!editingChild) return;
+    if (!editingChild) {return;}
 
     try {
       setIsLoading(true);
@@ -267,7 +269,7 @@ const ChildInfoModal: React.FC<ChildInfoModalProps> = ({
       );
     }
 
-    if (!editingChild) return null;
+    if (!editingChild) {return null;}
 
     return (
       <View style={styles.formContainer}>
@@ -419,20 +421,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.select({ios: 20, android: 16, default: 16}),
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 20, android: 16, default: 16}),
     width: '90%',
     maxWidth: 400,
     maxHeight: '80%',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: Platform.select({ios: 20, android: 18, default: 18}),
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     textAlign: 'center',
   },
   childrenList: {
@@ -443,8 +445,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    padding: 16,
-    borderRadius: 8,
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -453,13 +455,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   childName: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     marginBottom: 4,
     color: '#1F2937',
   },
   childDate: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
     color: '#1F2937',
   },
   editButton: {},
@@ -470,12 +472,12 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: Platform.select({ios: 16, android: 12, default: 12}),
   },
   button: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: Platform.select({ios: 12, android: 10, default: 10}),
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
     marginHorizontal: 4,
   },
   addButton: {
@@ -486,37 +488,37 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     textAlign: 'center',
     fontWeight: '500',
   },
   formContainer: {
-    padding: 16,
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
   },
   formLabel: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     marginBottom: 8,
     color: '#333',
   },
   input: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
+    padding: Platform.select({ios: 12, android: 10, default: 10}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#1F2937',
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   pickerContainer: {
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
     overflow: 'hidden',
   },
   picker: {
@@ -526,7 +528,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: Platform.select({ios: 16, android: 12, default: 12}),
   },
   cancelButton: {
     backgroundColor: '#FF3B30',
@@ -536,13 +538,13 @@ const styles = StyleSheet.create({
   },
   noChildrenText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#666',
     marginVertical: 20,
   },
   errorText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: 'red',
     marginVertical: 20,
   },

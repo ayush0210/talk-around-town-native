@@ -1,6 +1,6 @@
 // CardSkeleton.tsx
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {Platform, View, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -105,24 +105,43 @@ const styles = StyleSheet.create({
   tipItem: {marginBottom: 16},
   tipCardShadow: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
-  tipGradient: {borderRadius: 16, padding: 20, elevation: 5},
+  tipGradient: {
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
+    padding: Platform.select({ios: 20, android: 14, default: 14}),
+    elevation: 5,
+  },
   tipHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  tipTitle: {fontSize: 18, fontWeight: 'bold', color: '#333', flex: 1},
-  tipBody: {fontSize: 16, color: '#444', lineHeight: 24, marginBottom: 12},
-  tipDetails: {fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 16},
+  tipTitle: {
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  tipBody: {
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
+    color: '#444',
+    lineHeight: Platform.select({ios: 24, android: 20, default: 20}),
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
+  },
+  tipDetails: {
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
+    color: '#666',
+    lineHeight: Platform.select({ios: 20, android: 18, default: 18}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
+  },
   tipActions: {flexDirection: 'row', alignItems: 'center', marginTop: 6},
   playButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: Platform.select({ios: 8, android: 7, default: 7}),
+    paddingHorizontal: Platform.select({ios: 12, android: 10, default: 10}),
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

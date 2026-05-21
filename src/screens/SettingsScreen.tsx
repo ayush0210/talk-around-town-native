@@ -12,6 +12,7 @@ import {
   Pressable,
   FlatList,
   SafeAreaView,
+  Platform,
 } from 'react-native';
 import {AuthContext, AuthContextType} from '../context/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
@@ -249,18 +250,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
   // Render children info menu item with status indicators
   const renderChildrenInfoMenuItem = () => {
     const getStatusIcon = () => {
-      if (childrenLoading) return 'hourglass-empty';
-      if (childrenError && !isFromCache) return 'error';
-      if (isFromCache) return 'cached';
-      if (needsProfileCompletion) return 'warning';
+      if (childrenLoading) {return 'hourglass-empty';}
+      if (childrenError && !isFromCache) {return 'error';}
+      if (isFromCache) {return 'cached';}
+      if (needsProfileCompletion) {return 'warning';}
       return 'child-care';
     };
 
     const getStatusColor = () => {
-      if (childrenLoading) return '#FF9500';
-      if (childrenError && !isFromCache) return '#FF3B30';
-      if (isFromCache) return '#FF9500';
-      if (needsProfileCompletion) return '#FF9500';
+      if (childrenLoading) {return '#FF9500';}
+      if (childrenError && !isFromCache) {return '#FF3B30';}
+      if (isFromCache) {return '#FF9500';}
+      if (needsProfileCompletion) {return '#FF9500';}
       return '#5856D6';
     };
 
@@ -281,7 +282,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
             {childrenError && !isFromCache && (
               <Text style={styles.errorSubtext}>Tap to retry</Text>
             )}
-            {isFromCache && <Text style={styles.cacheSubtext}></Text>}
+            {isFromCache && <Text style={styles.cacheSubtext} />}
             {needsProfileCompletion && !childrenError && (
               <Text style={styles.warningSubtext}>Profile incomplete</Text>
             )}
@@ -319,7 +320,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
       // const savedTipsData = await AsyncStorage.getItem('savedTips');
       // if (savedTipsData) setSavedTips(JSON.parse(savedTipsData));
       const likedTipsData = await AsyncStorage.getItem('likedTips');
-      if (likedTipsData) setLikedTips(JSON.parse(likedTipsData));
+      if (likedTipsData) {setLikedTips(JSON.parse(likedTipsData));}
     } catch (error) {
       console.warn('Failed to load saved/liked tips:', error);
     }
@@ -369,7 +370,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
     setAudioLoadingIndex(index);
     try {
       const response = await fetch(
-        `http://https://enact.education.ufl.edu:4000/generate-tip-audio`,
+        'http://https://enact.education.ufl.edu:4000/generate-tip-audio',
         {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -381,7 +382,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
           }),
         },
       );
-      if (!response.ok) throw new Error('Failed to generate audio');
+      if (!response.ok) {throw new Error('Failed to generate audio');}
       const {audioUrl} = await response.json();
       const fullAudioUrl = `http://https://enact.education.ufl.edu:4000/audio${audioUrl}`;
       tip.audioUrl = audioUrl;
@@ -408,7 +409,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
     setActiveAudioIndex(index);
     try {
       const audioUrl = await loadAudio(tip, index);
-      if (!audioUrl) return;
+      if (!audioUrl) {return;}
       setIsPlaying(true);
       currentSound.current = new (require('react-native-sound'))(
         audioUrl,
@@ -1168,8 +1169,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: Platform.select({ios: 28, android: 24, default: 24}),
+    borderBottomRightRadius: Platform.select({ios: 28, android: 24, default: 24}),
     backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
@@ -1179,8 +1180,8 @@ const styles = StyleSheet.create({
   },
 
   gradientBackground: {
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: Platform.select({ios: 28, android: 24, default: 24}),
+    borderBottomRightRadius: Platform.select({ios: 28, android: 24, default: 24}),
     // justifyContent: 'flex-end',
   },
 
@@ -1188,15 +1189,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
   },
 
   backButton: {
-    padding: 8,
+    padding: Platform.select({ios: 8, android: 6, default: 6}),
   },
 
   headerTitle: {
-    fontSize: 20,
+    fontSize: Platform.select({ios: 20, android: 18, default: 18}),
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -1208,7 +1209,7 @@ const styles = StyleSheet.create({
   border: {
     borderBottomColor: 'rgba(255, 255, 255, 0.8)',
     borderBottomWidth: 1,
-    marginVertical: 12,
+    marginVertical: Platform.select({ios: 12, android: 8, default: 8}),
   },
 
   contentArea: {
@@ -1217,12 +1218,12 @@ const styles = StyleSheet.create({
 
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: Platform.select({ios: 16, android: 14, default: 14}),
+    paddingTop: Platform.select({ios: 16, android: 12, default: 12}),
   },
 
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: Platform.select({ios: 30, android: 24, default: 24}),
   },
 
   contentPrefsContainer: {
@@ -1231,10 +1232,10 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginBottom: 24,
+    marginBottom: Platform.select({ios: 24, android: 14, default: 14}),
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
@@ -1244,9 +1245,9 @@ const styles = StyleSheet.create({
 
   contentBadge: {
     backgroundColor: '#4A90E2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: Platform.select({ios: 10, android: 8, default: 8}),
+    paddingVertical: Platform.select({ios: 4, android: 3, default: 3}),
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
   },
 
   contentBadgeText: {
@@ -1256,10 +1257,10 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 10, default: 10}),
   },
 
   itemLeft: {
@@ -1271,7 +1272,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: Platform.select({ios: 16, android: 12, default: 12}),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -1280,12 +1281,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16,
+    paddingTop: Platform.select({ios: 16, android: 12, default: 12}),
     borderBottomWidth: 0,
   },
 
   menuIcon: {
-    marginRight: 16,
+    marginRight: Platform.select({ios: 16, android: 12, default: 12}),
   },
 
   menuTextContainer: {
@@ -1293,7 +1294,7 @@ const styles = StyleSheet.create({
   },
 
   menuText: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#1F2937',
   },
 
@@ -1347,7 +1348,7 @@ const styles = StyleSheet.create({
   },
 
   dangerMenuText: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#FF3B30',
     fontWeight: '500',
   },
@@ -1418,39 +1419,39 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Platform.select({ios: 20, android: 16, default: 16}),
   },
 
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 20, android: 16, default: 16}),
     width: '90%',
     maxWidth: 400,
   },
 
   modalTitle: {
-    fontSize: 20,
+    fontSize: Platform.select({ios: 20, android: 18, default: 18}),
     fontWeight: '600',
     marginBottom: 12,
     textAlign: 'center',
   },
 
   modalText: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     marginBottom: 16,
     textAlign: 'center',
   },
 
   closeButton: {
     backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
+    padding: Platform.select({ios: 12, android: 10, default: 10}),
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
   },
 
   closeButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -1460,10 +1461,10 @@ const styles = StyleSheet.create({
   },
 
   featuresCard: {
-    marginBottom: 24,
+    marginBottom: Platform.select({ios: 24, android: 14, default: 14}),
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
@@ -1473,26 +1474,26 @@ const styles = StyleSheet.create({
   featuresHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 10, default: 10}),
     gap: 8,
   },
   featuresTitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#333',
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: 12,
+    paddingVertical: Platform.select({ios: 12, android: 10, default: 10}),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     gap: 12,
   },
   featureIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: Platform.select({ios: 40, android: 36, default: 36}),
+    height: Platform.select({ios: 40, android: 36, default: 36}),
+    borderRadius: Platform.select({ios: 10, android: 9, default: 9}),
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1501,13 +1502,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   featureName: {
-    fontSize: 15,
+    fontSize: Platform.select({ios: 15, android: 14, default: 14}),
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 3,
   },
   featureDesc: {
-    fontSize: 13,
+    fontSize: Platform.select({ios: 13, android: 12, default: 12}),
     color: '#6B7280',
     lineHeight: 18,
   },

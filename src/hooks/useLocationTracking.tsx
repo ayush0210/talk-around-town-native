@@ -61,11 +61,11 @@ export const useLocationTracking = () => {
     };
 
     // Only update if location has changed significantly (> 10 meters)
-    if (!lastLocationRef.current || 
+    if (!lastLocationRef.current ||
         calculateDistance(
-          lastLocationRef.current.latitude, 
+          lastLocationRef.current.latitude,
           lastLocationRef.current.longitude,
-          latitude, 
+          latitude,
           longitude
         ) > 10) {
       setLocation(newLocation);
@@ -109,7 +109,7 @@ export const useLocationTracking = () => {
                 title: 'Background Location',
                 message: 'Allow ENACT to access location in the background for location-based tips?',
                 buttonNeutral: 'Ask Me Later',
-                buttonNegative: 'Cancel', 
+                buttonNegative: 'Cancel',
                 buttonPositive: 'OK',
               }
             );
@@ -149,7 +149,7 @@ export const useLocationTracking = () => {
 
   const getCurrentLocation = useCallback((fromBackground = false) => {
     const timeout = fromBackground ? 30000 : 15000;
-    
+
     setIsLoading(true);
     Geolocation.getCurrentPosition(
       handleLocationSuccess,

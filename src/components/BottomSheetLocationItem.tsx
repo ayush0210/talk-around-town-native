@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons';
 
 type LocationList = {
     id: number,
@@ -23,7 +23,7 @@ const BottomSheetLocationItem: React.FC<BottomSheetLocationItemProps> = ({ locat
             <View style={{ flex: 1 }}>
                 <Text style={styles.titleText}>{locations.title}</Text>
                 <Text style={styles.descriptionText}>
-                    {locations.description === "" ? 'Home' : locations.description}
+                    {locations.description === '' ? 'Home' : locations.description}
                 </Text>
                 <Text style={styles.addressText}>
                     {locations.address.slice(0, -11) ?? 'Loading address...'}
@@ -40,18 +40,18 @@ const BottomSheetLocationItem: React.FC<BottomSheetLocationItemProps> = ({ locat
 const styles = StyleSheet.create({
     titleText: {
         fontSize: 16,
-        fontWeight: "600",
+        fontWeight: '600',
         marginBottom: 4,
-        color: "#000"
+        color: '#000',
     },
     descriptionText: {
         fontSize: 14,
-        color: "#555",
+        color: '#555',
         marginBottom: 4,
     },
     addressText: {
         fontSize: 14,
-        color: "#333",
+        color: '#333',
     },
     deleteBG: {
         width: 40,

@@ -22,7 +22,7 @@ export function ageInMonthsFromDob(dobIso: string, at: Date = now()): number {
     (at.getFullYear() - dob.getFullYear()) * MONTHS_PER_YEAR +
     (at.getMonth() - dob.getMonth());
   // adjust for day-of-month
-  if (at.getDate() < dob.getDate()) months -= 1;
+  if (at.getDate() < dob.getDate()) {months -= 1;}
   return Math.max(0, months);
 }
 
@@ -92,8 +92,8 @@ export function matchChildrenByAge(
   const exactCutoff = Math.max(0, Math.floor(tolerance / 2));
 
   for (const item of withAges) {
-    if (item.diff <= exactCutoff) exact.push(item.child);
-    else if (item.diff <= tolerance) close.push(item.child);
+    if (item.diff <= exactCutoff) {exact.push(item.child);}
+    else if (item.diff <= tolerance) {close.push(item.child);}
   }
 
   // If no exact but one very close child, we’ll let the caller decide whether to accept or ask.

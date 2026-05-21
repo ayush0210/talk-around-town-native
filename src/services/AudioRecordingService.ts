@@ -152,7 +152,7 @@ class AudioRecordingService {
       this.audioRecorderPlayer.setSubscriptionDuration(1);
 
       // Configure audio settings - use platform-specific settings
-      let audioSet: any = undefined;
+      let audioSet: any;
       if (Platform.OS === 'android') {
         audioSet = {
           AudioEncoderAndroid: AudioEncoderAndroidType.AAC,

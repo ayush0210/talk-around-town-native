@@ -4,20 +4,20 @@ export interface Location {
     latitudeDelta?: number;
     longitudeDelta?: number;
   }
-  
+
   export interface SavedLocation extends Location {
     id: string;
     name: string;
     description: string;
     type: string;
   }
-  
+
   export interface LocationDetail {
     title: string;
     desription: string; // Note: keeping original typo for API compatibility
     pinColor: string;
   }
-  
+
   export interface LocationFormData {
     name: string;
     description: string;
@@ -61,4 +61,3 @@ export interface Location {
       locationName?: string;
     } | null;
   }
-  

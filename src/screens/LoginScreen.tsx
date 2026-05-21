@@ -81,7 +81,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         const responseData = await response.json();
         console.log('SERVER RESPONSE:', responseData);
 
-        if (!response.ok) throw new Error('Failed to update token on server');
+        if (!response.ok) {throw new Error('Failed to update token on server');}
       } catch (error) {
         console.error('Error updating token on server:', error);
         // Don't throw - this shouldn't prevent login
@@ -92,7 +92,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   // Enhanced FCM token handling with iOS-specific fixes
   const getAndStoreToken = useCallback(
-    async (retryCount = 0) => {
+    async (retryCount = 0): Promise<void> => {
       const maxRetries = 3;
 
       try {
@@ -493,29 +493,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingVertical: Platform.select({ios: 40, android: 28, default: 28}),
+    paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: Platform.select({ios: 40, android: 26, default: 26}),
     width: '100%',
   },
   titleContainer: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 36,
+    fontSize: Platform.select({ios: 36, android: 30, default: 30}),
     fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 15, default: 15}),
     color: '#E0E0E0',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 10, default: 10}),
     textAlign: 'center',
   },
   versionBadge: {
@@ -545,8 +545,8 @@ const styles = StyleSheet.create({
   formContainer: {
     width: inputWidth,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: Platform.select({ios: 20, android: 16, default: 16}),
+    padding: Platform.select({ios: 24, android: 18, default: 18}),
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: Platform.select({ios: 20, android: 14, default: 14}),
   },
   inputLabel: {
     fontSize: 14,
@@ -567,10 +567,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 48,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    height: Platform.select({ios: 48, android: 42, default: 42}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#333333',
   },
   passwordRow: {
@@ -579,13 +579,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    height: 48,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    height: Platform.select({ios: 48, android: 42, default: 42}),
   },
   passwordRowInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#333333',
   },
   eyeButton: {
@@ -595,8 +595,8 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    height: 50,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
@@ -611,23 +611,23 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     fontWeight: 'bold',
   },
   forgotPassword: {
     alignItems: 'center',
-    marginTop: 16,
-    height: 20,
+    marginTop: Platform.select({ios: 16, android: 12, default: 12}),
+    height: Platform.select({ios: 20, android: 18, default: 18}),
   },
   forgotPasswordText: {
     color: '#8B5CF6',
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
-    height: 20,
+    marginVertical: Platform.select({ios: 24, android: 16, default: 16}),
+    height: Platform.select({ios: 20, android: 18, default: 18}),
   },
   dividerLine: {
     flex: 1,
@@ -636,21 +636,21 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: '#666666',
-    paddingHorizontal: 16,
-    fontSize: 14,
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    height: 20,
+    height: Platform.select({ios: 20, android: 18, default: 18}),
   },
   registerText: {
     color: '#666666',
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
   },
   link: {
     color: '#8B5CF6',
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
     fontWeight: '600',
   },
 });

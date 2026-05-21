@@ -74,7 +74,7 @@ const RecordingsListModal: React.FC<RecordingsListModalProps> = ({
         playbackRef.current = true;
 
         audioRecordingService.addPlayBackListener(e => {
-          if (!playbackRef.current) return;
+          if (!playbackRef.current) {return;}
           setPlaybackPosition(Math.floor(e.currentPosition / 1000));
           setPlaybackDuration(Math.floor(e.duration / 1000));
 

@@ -153,7 +153,7 @@ const App: React.FC = () => {
       <View>
         <Text>Loading...</Text>
       </View>
-    )
+    );
   }
 
   return (
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   bg: {
     backgroundColor: 'white',
     padding: 10,
-  }
+  },
 });
 
 const styles1 = StyleSheet.create({

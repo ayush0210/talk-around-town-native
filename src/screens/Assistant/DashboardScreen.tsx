@@ -77,42 +77,38 @@ const DashboardScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportSheets, setExportSheets] = useState({
-    users: true,
-    children: true,
-    locations: true,
-    notifications: true,
-  });
   const [exportDateFrom, setExportDateFrom] = useState<Date | null>(null);
   const [exportDateTo, setExportDateTo] = useState<Date | null>(null);
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const {isAdmin} = useContext(AuthContext);
+  const [pendingActivities, setPendingActivities] = useState<
+    {id: number; name: string; domains: string[]; submitted_by_name: string; submitted_by_email: string; created_at: string}[]
+  >([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   const exportToExcel = async () => {
     setShowExportModal(false);
-    const selected = Object.entries(exportSheets)
-      .filter(([, v]) => v)
-      .map(([k]) => k);
-    if (selected.length === 0) {
-      Alert.alert('No Data Selected', 'Please select at least one sheet to export.');
-      return;
-    }
     try {
       setIsExporting(true);
       const params = new URLSearchParams();
-      params.append('sheets', selected.join(','));
-      if (exportDateFrom) params.append('dateFrom', exportDateFrom.toISOString().split('T')[0]);
-      if (exportDateTo) params.append('dateTo', exportDateTo.toISOString().split('T')[0]);
+      if (exportDateFrom) {params.append('dateFrom', exportDateFrom.toISOString().split('T')[0]);}
+      if (exportDateTo) {params.append('dateTo', exportDateTo.toISOString().split('T')[0]);}
       const response = await fetch(
         `${API_BASE_URL}/api/admin/export/excel?${params.toString()}`,
         {headers: {Authorization: `Bearer ${userInfo.access_token}`}},
       );
-      if (!response.ok) throw new Error('Export request failed');
+      if (!response.ok) {throw new Error('Export request failed');}
       const {data, filename} = await response.json();
-      const path = `${RNFS.DocumentDirectoryPath}/${filename}`;
-      await RNFS.writeFile(path, data, 'base64');
-      await Share.share({title: 'ENACT Dashboard Export', url: `file://${path}`});
+      if (Platform.OS === 'android') {
+        const downloadPath = `${RNFS.DownloadDirectoryPath}/${filename}`;
+        await RNFS.writeFile(downloadPath, data, 'base64');
+        Alert.alert('Export Complete', `File saved to Downloads/${filename}`);
+      } else {
+        const path = `${RNFS.DocumentDirectoryPath}/${filename}`;
+        await RNFS.writeFile(path, data, 'base64');
+        await Share.share({title: 'ENACT Dashboard Export', url: `file://${path}`});
+      }
     } catch (error) {
       console.error('Export error:', error);
       Alert.alert('Export Failed', 'Could not export data to Excel. Please try again.');
@@ -121,9 +117,6 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  const toggleSheet = (key: keyof typeof exportSheets) => {
-    setExportSheets(prev => ({...prev, [key]: !prev[key]}));
-  };
   useEffect(() => {
     if (!isAdmin) {
       Alert.alert(
@@ -301,7 +294,7 @@ const DashboardScreen: React.FC = () => {
   // Prepare data for charts
   const prepareUserTimelineData = () => {
     if (!dashboardData?.userTimeline || dashboardData.userTimeline.length === 0)
-      return null;
+      {return null;}
 
     // Take only the last 7 entries for better display
     const timelineData = dashboardData.userTimeline.slice(-7);
@@ -323,7 +316,7 @@ const DashboardScreen: React.FC = () => {
 
   const prepareChildrenAgeData = () => {
     if (!dashboardData?.childrenAges || dashboardData.childrenAges.length === 0)
-      return null;
+      {return null;}
 
     return {
       labels: dashboardData.childrenAges.map(item => `${item.age}y`),
@@ -340,7 +333,7 @@ const DashboardScreen: React.FC = () => {
       !dashboardData?.locationTypes ||
       dashboardData.locationTypes.length === 0
     )
-      return null;
+      {return null;}
 
     const colors = [
       '#FF6384',
@@ -365,7 +358,7 @@ const DashboardScreen: React.FC = () => {
       !dashboardData?.notificationTimes ||
       dashboardData.notificationTimes.length === 0
     )
-      return null;
+      {return null;}
 
     // Create a full 24-hour array with zeros for missing hours
     const hourlyData = Array(24).fill(0);
@@ -831,6 +824,89 @@ const DashboardScreen: React.FC = () => {
       </View>
     </>
   );
+  const fetchPendingActivities = async () => {
+    if (!userInfo?.access_token) {return;}
+    setActivitiesLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/activities/pending`, {
+        headers: {Authorization: `Bearer ${userInfo.access_token}`},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingActivities(data);
+      }
+    } catch (err) {
+      console.error('Error fetching pending activities:', err);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  const handleActivityDecision = async (id: number, action: 'approve' | 'reject') => {
+    if (!userInfo?.access_token) {return;}
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/activities/${id}/${action}`, {
+        method: 'PATCH',
+        headers: {Authorization: `Bearer ${userInfo.access_token}`},
+      });
+      if (res.ok) {
+        setPendingActivities(prev => prev.filter(a => a.id !== id));
+        Alert.alert('Done', `Activity ${action === 'approve' ? 'approved' : 'rejected'}.`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not update activity. Please try again.');
+    }
+  };
+
+  const renderActivitiesTab = () => (
+    <View style={styles.sectionContainer}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
+        <Text style={styles.sectionTitle}>Pending Activities</Text>
+        <TouchableOpacity onPress={fetchPendingActivities}>
+          <Icon name="refresh" size={20} color="#4A90E2" />
+        </TouchableOpacity>
+      </View>
+      {activitiesLoading ? (
+        <ActivityIndicator color="#4A90E2" style={{marginTop: 20}} />
+      ) : pendingActivities.length === 0 ? (
+        <Text style={{color: '#666', textAlign: 'center', marginTop: 20}}>
+          No pending activity submissions.
+        </Text>
+      ) : (
+        pendingActivities.map(activity => (
+          <View key={activity.id} style={styles.activityItem}>
+            <View style={{flex: 1}}>
+              <Text style={[styles.activityTitle, {fontSize: 15}]}>{activity.name}</Text>
+              <Text style={styles.activitySubtitle}>
+                By: {activity.submitted_by_name} ({activity.submitted_by_email})
+              </Text>
+              {activity.domains?.length > 0 && (
+                <Text style={styles.activitySubtitle}>
+                  Domains: {activity.domains.join(', ')}
+                </Text>
+              )}
+              <Text style={styles.activityDate}>
+                {new Date(activity.created_at).toLocaleDateString()}
+              </Text>
+            </View>
+            <View style={{gap: 8}}>
+              <TouchableOpacity
+                style={{backgroundColor: '#34C759', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6}}
+                onPress={() => handleActivityDecision(activity.id, 'approve')}>
+                <Text style={{color: 'white', fontWeight: '600', fontSize: 13}}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{backgroundColor: '#FF3B30', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6}}
+                onPress={() => handleActivityDecision(activity.id, 'reject')}>
+                <Text style={{color: 'white', fontWeight: '600', fontSize: 13}}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  );
+
   if (!isAdmin) {
     return (
       <SafeAreaView style={styles.accessDeniedContainer}>
@@ -988,6 +1064,29 @@ const DashboardScreen: React.FC = () => {
               Notifications
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'activities' && styles.activeTab,
+            ]}
+            onPress={() => {
+              setActiveTab('activities');
+              fetchPendingActivities();
+            }}>
+            <Icon
+              name="local-activity"
+              size={20}
+              color={activeTab === 'activities' ? '#4A90E2' : '#666'}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'activities' && styles.activeTabText,
+              ]}>
+              Activities
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -1003,6 +1102,7 @@ const DashboardScreen: React.FC = () => {
           {activeTab === 'children' && renderChildrenTab()}
           {activeTab === 'locations' && renderLocationsTab()}
           {activeTab === 'notifications' && renderNotificationsTab()}
+          {activeTab === 'activities' && renderActivitiesTab()}
         </View>
       </ScrollView>
 
@@ -1011,23 +1111,6 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.exportModal}>
             <Text style={styles.exportModalTitle}>Export Options</Text>
-
-            <Text style={styles.exportSectionLabel}>Include Sheets</Text>
-            {(['users', 'children', 'locations', 'notifications'] as const).map(key => (
-              <TouchableOpacity
-                key={key}
-                style={styles.exportCheckRow}
-                onPress={() => toggleSheet(key)}>
-                <Icon
-                  name={exportSheets[key] ? 'check-box' : 'check-box-outline-blank'}
-                  size={22}
-                  color="#4A90E2"
-                />
-                <Text style={styles.exportCheckLabel}>
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
 
             <Text style={styles.exportSectionLabel}>Date Range (optional)</Text>
             <Text style={styles.exportDateHint}>Filters Users (registered) and Notifications</Text>
@@ -1070,7 +1153,7 @@ const DashboardScreen: React.FC = () => {
                 value={exportDateFrom || new Date()}
                 mode="date"
                 display="default"
-                onChange={(_, date) => { setShowFromPicker(false); if (date) setExportDateFrom(date); }}
+                onChange={(_, date) => { setShowFromPicker(false); if (date) {setExportDateFrom(date);} }}
               />
             )}
             {showToPicker && (
@@ -1078,7 +1161,7 @@ const DashboardScreen: React.FC = () => {
                 value={exportDateTo || new Date()}
                 mode="date"
                 display="default"
-                onChange={(_, date) => { setShowToPicker(false); if (date) setExportDateTo(date); }}
+                onChange={(_, date) => { setShowToPicker(false); if (date) {setExportDateTo(date);} }}
               />
             )}
 

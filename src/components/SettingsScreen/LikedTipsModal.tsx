@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Sound from 'react-native-sound';
@@ -95,7 +96,7 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
           //   audioCache.current.set(key, audioUrl);
         } else {
           const res = await fetch(
-            `http://https://enact.education.ufl.edu:4000/generate-tip-audio`,
+            'http://https://enact.education.ufl.edu:4000/generate-tip-audio',
             {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -107,14 +108,14 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
               }),
             },
           );
-          if (!res.ok) throw new Error('Failed to generate audio');
+          if (!res.ok) {throw new Error('Failed to generate audio');}
           const {audioUrl: newUrl} = await res.json();
           audioUrl = `http://https://enact.education.ufl.edu:4000/audio${newUrl}`;
           tip.audioUrl = newUrl;
           //   audioCache.current.set(key, audioUrl);
         }
 
-        if (!audioUrl) return;
+        if (!audioUrl) {return;}
 
         currentSound.current = new Sound(audioUrl, '', err => {
           if (err) {
@@ -127,7 +128,7 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
           setIsPlaying(true);
           currentSound.current?.play((success: any) => {
             if (!success)
-              Alert.alert('Error', 'Audio playback failed. Please try again.');
+              {Alert.alert('Error', 'Audio playback failed. Please try again.');}
             setIsPlaying(false);
             setActiveAudioKey(null);
             currentSound.current?.release();
@@ -166,47 +167,54 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            paddingHorizontal: 20,
-            paddingVertical: 16,
+            paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
+            paddingVertical: Platform.select({ios: 16, android: 12, default: 12}),
             backgroundColor: 'white',
             borderBottomWidth: 1,
             borderBottomColor: '#E8E8E8',
           }}>
-          <Text style={{fontSize: 20, fontWeight: 'bold', color: '#333'}}>
+          <Text style={{fontSize: Platform.select({ios: 20, android: 18, default: 18}), fontWeight: 'bold', color: '#333'}}>
             Liked Tips ({likedTips.length})
           </Text>
           <TouchableOpacity
-            style={{padding: 8}}
+            style={{padding: Platform.select({ios: 8, android: 6, default: 6})}}
             onPress={() => setShowLikedTipsModal(false)}>
             <Icon name="close" size={24} color="#666" />
           </TouchableOpacity>
         </View>
         <ScrollView
-          style={{flex: 1, paddingHorizontal: 16, paddingTop: 16}}
+          style={{
+            flex: 1,
+            paddingHorizontal: Platform.select({ios: 16, android: 14, default: 14}),
+            paddingTop: Platform.select({ios: 16, android: 12, default: 12}),
+          }}
           showsVerticalScrollIndicator={false}>
           {likedTips.length > 0 ? (
             likedTips.map((tip, index) => {
               const key = tipKey(tip);
               return (
-                <View key={tip.id} style={{marginBottom: 16}}>
+                <View key={tip.id} style={{marginBottom: Platform.select({ios: 16, android: 12, default: 12})}}>
                   <LinearGradient
                     colors={['#ffffff', '#f8f9fa']}
-                    style={{borderRadius: 16, padding: 20}}>
+                    style={{
+                      borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
+                      padding: Platform.select({ios: 20, android: 14, default: 14}),
+                    }}>
                     <View
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        marginBottom: 12,
+                        marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
                       }}>
                       <Icon
                         name="lightbulb"
                         size={24}
                         color="#FFA726"
-                        style={{marginRight: 12}}
+                        style={{marginRight: Platform.select({ios: 12, android: 10, default: 10})}}
                       />
                       <Text
                         style={{
-                          fontSize: 18,
+                          fontSize: Platform.select({ios: 18, android: 16, default: 16}),
                           fontWeight: 'bold',
                           color: '#333',
                           flex: 1,
@@ -216,29 +224,29 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
                     </View>
                     <Text
                       style={{
-                        fontSize: 16,
+                        fontSize: Platform.select({ios: 16, android: 14, default: 14}),
                         color: '#444',
-                        lineHeight: 24,
-                        marginBottom: 12,
+                        lineHeight: Platform.select({ios: 24, android: 20, default: 20}),
+                        marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
                       }}>
                       {tip.body || ''}
                     </Text>
                     <Text
                       style={{
-                        fontSize: 14,
+                        fontSize: Platform.select({ios: 14, android: 12, default: 12}),
                         color: '#666',
-                        lineHeight: 20,
-                        marginBottom: 16,
+                        lineHeight: Platform.select({ios: 20, android: 18, default: 18}),
+                        marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
                       }}>
                       {tip.details || ''}
                     </Text>
-                    <View style={{flexDirection: 'row', marginTop: 12}}>
+                    <View style={{flexDirection: 'row', marginTop: Platform.select({ios: 12, android: 8, default: 8})}}>
                       <TouchableOpacity
                         style={[
                           {
-                            paddingVertical: 8,
-                            paddingHorizontal: 12,
-                            borderRadius: 6,
+                            paddingVertical: Platform.select({ios: 8, android: 7, default: 7}),
+                            paddingHorizontal: Platform.select({ios: 12, android: 10, default: 10}),
+                            borderRadius: Platform.select({ios: 6, android: 5, default: 5}),
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -294,26 +302,26 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
             <View
               style={{
                 alignItems: 'center',
-                paddingVertical: 40,
-                paddingHorizontal: 20,
+                paddingVertical: Platform.select({ios: 40, android: 28, default: 28}),
+                paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
               }}>
               <Icon name="favorite-border" size={64} color="#ccc" />
               <Text
                 style={{
-                  fontSize: 18,
+                  fontSize: Platform.select({ios: 18, android: 16, default: 16}),
                   fontWeight: '600',
                   color: '#999',
-                  marginTop: 16,
+                  marginTop: Platform.select({ios: 16, android: 12, default: 12}),
                 }}>
                 No Liked Tips
               </Text>
               <Text
                 style={{
-                  fontSize: 14,
+                  fontSize: Platform.select({ios: 14, android: 12, default: 12}),
                   color: '#ccc',
                   textAlign: 'center',
                   marginTop: 8,
-                  lineHeight: 20,
+                  lineHeight: Platform.select({ios: 20, android: 18, default: 18}),
                 }}>
                 Like tips by tapping the heart icon on any tip
               </Text>

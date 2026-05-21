@@ -27,6 +27,6 @@ export const useContentPreferences = () => {
 
   return {
     contentPreferences,
-    loading
+    loading,
   };
 };

@@ -9,9 +9,9 @@ interface LocationSearchBarProps {
   onClear: () => void;
 }
 
-export const LocationSearchBar: React.FC<LocationSearchBarProps> = React.memo(({ 
-  onLocationSelect, 
-  onClear 
+export const LocationSearchBar: React.FC<LocationSearchBarProps> = React.memo(({
+  onLocationSelect,
+  onClear,
 }) => {
   const ref = useRef<GooglePlacesAutocompleteRef>(null);
 
@@ -89,20 +89,19 @@ const searchStyles = {
     borderWidth: 0,
   },
   textInput: {
-    height: 45,
+    height: Platform.select({ios: 45, android: 40, default: 40}),
     color: '#333',
-    fontSize: 16,
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 15, android: 12, default: 12}),
   },
   listView: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
     marginTop: 5,
   },
   row: {
-    padding: 13,
-    height: 50,
+    padding: Platform.select({ios: 13, android: 10, default: 10}),
+    height: Platform.select({ios: 50, android: 44, default: 44}),
   },
 };
-

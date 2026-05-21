@@ -75,7 +75,7 @@ export default CustomTabBar;
 const styles = StyleSheet.create({
     wrapper: {
         position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 34 : 20,
+        bottom: Platform.OS === 'ios' ? 34 : 16,
         left: 0,
         right: 0,
         alignItems: 'center',
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         backgroundColor: 'rgba(255, 255, 255, 0.9)', // semi-transparent white
-        borderRadius: 28,
-        padding: 4,
+        borderRadius: Platform.select({ios: 28, android: 24, default: 24}),
+        padding: Platform.select({ios: 4, android: 3, default: 3}),
         width: '90%',
         justifyContent: 'space-between',
         shadowColor: '#000',
@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
     },
     tabButton: {
         flex: 1,
-        paddingVertical: 10,
-        borderRadius: 25,
+        paddingVertical: Platform.select({ios: 10, android: 8, default: 8}),
+        borderRadius: Platform.select({ios: 25, android: 20, default: 20}),
         alignItems: 'center',
         justifyContent: 'center',
     },

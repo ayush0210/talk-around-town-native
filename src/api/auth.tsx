@@ -8,12 +8,12 @@ export const fetchWithAuth = async (
     // Add authorization header if token is provided
     const headers = {
       ...(options.headers || {}),
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     };
 
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
     });
 
     // Check for unauthorized response

@@ -22,7 +22,7 @@
 //     if (isLoading) {
 //       // Set initial fact immediately when loading starts
 //       setCurrentFact(facts[Math.floor(Math.random() * facts.length)]);
-      
+
 //       // Change fact every 5 seconds
 //       const interval = setInterval(() => {
 //         setCurrentFact(facts[Math.floor(Math.random() * facts.length)]);
@@ -125,7 +125,7 @@ const Loader = ({isLoading}) => {
       // Set initial fact and start animations
       setCurrentFact(quickFacts[0]);
       setCurrentStage(0);
-      
+
       // Fade in animation
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -165,13 +165,13 @@ const Loader = ({isLoading}) => {
         duration: 200,
         useNativeDriver: true,
       }).start();
-      
+
       // Reset animations
       progress.setValue(0);
     }
   }, [isLoading, progress, fadeAnim]);
 
-  if (!isLoading) return null;
+  if (!isLoading) {return null;}
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 1],
@@ -183,10 +183,10 @@ const Loader = ({isLoading}) => {
       <View style={styles.loaderBox}>
         {/* Header with dynamic icon */}
         <View style={styles.header}>
-          <Icon 
-            name={loadingStages[currentStage].icon} 
-            size={32} 
-            color="#4CAF50" 
+          <Icon
+            name={loadingStages[currentStage].icon}
+            size={32}
+            color="#4CAF50"
             style={styles.headerIcon}
           />
           <Text style={styles.stageText}>
@@ -196,20 +196,20 @@ const Loader = ({isLoading}) => {
 
         {/* Progress bar */}
         <View style={styles.progressContainer}>
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.progressBar, 
-              { width: progressWidth }
-            ]} 
+              styles.progressBar,
+              { width: progressWidth },
+            ]}
           />
         </View>
 
         {/* Spinning indicator */}
         <ActivityIndicator size="large" color="#4CAF50" style={styles.spinner} />
-        
+
         {/* Loading text */}
         <Text style={styles.loadingText}>Generating your parenting tips...</Text>
-        
+
         {/* Dynamic fact */}
         <View style={styles.factContainer}>
           <Icon name="lightbulb" size={16} color="#FFA726" style={styles.factIcon} />

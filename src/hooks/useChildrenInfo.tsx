@@ -52,7 +52,7 @@ export const useChildrenInfo = (): UseChildrenInfoReturn => {
   const isCacheValid = useCallback(async (): Promise<boolean> => {
     try {
       const expiryTime = await AsyncStorage.getItem(CACHE_EXPIRY_KEY);
-      if (!expiryTime) return false;
+      if (!expiryTime) {return false;}
 
       const isValid = Date.now() < parseInt(expiryTime);
       debugLog(`Cache validity check: ${isValid ? 'VALID' : 'EXPIRED'}`);

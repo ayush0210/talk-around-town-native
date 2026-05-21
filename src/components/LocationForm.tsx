@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import LinearGradient from 'react-native-linear-gradient';
@@ -36,10 +36,10 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-export const LocationForm: React.FC<LocationFormProps> = React.memo(({ 
-  location, 
-  onSubmit, 
-  existingLocations 
+export const LocationForm: React.FC<LocationFormProps> = React.memo(({
+  location,
+  onSubmit,
+  existingLocations,
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -48,7 +48,7 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
 
   const isLocationNearby = useCallback((lat: number, lon: number): boolean => {
     const threshold = 100;
-    return existingLocations.some(loc => 
+    return existingLocations.some(loc =>
       calculateDistance(lat, lon, loc.latitude, loc.longitude) <= threshold
     );
   }, [existingLocations]);
@@ -97,7 +97,7 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
   }, [onSubmit, name, description, selectedType, location]);
 
   const handleSubmit = useCallback(async () => {
-    if (!validateForm() || isSubmitting) return;
+    if (!validateForm() || isSubmitting) {return;}
 
     if (name.trim().toLowerCase() === 'home') {
       Alert.alert(
@@ -119,7 +119,7 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
       colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.98)']}
       style={styles.container}>
       <Text style={styles.title}>Add New Location</Text>
-      
+
       <Dropdown
         style={styles.dropdown}
         placeholderStyle={styles.placeholderStyle}
@@ -135,7 +135,7 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
           <AntDesign style={styles.icon} color="#333" name="Safety" size={20} />
         )}
       />
-      
+
       <TextInput
         style={styles.input}
         placeholder="Location name"
@@ -146,7 +146,7 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
         autoCapitalize="words"
         autoCorrect={false}
       />
-      
+
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Description"
@@ -158,9 +158,9 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
         maxLength={200}
         autoCapitalize="sentences"
       />
-      
-      <TouchableOpacity 
-        style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+
+      <TouchableOpacity
+        style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
         onPress={handleSubmit}
         disabled={isSubmitting}>
         <Text style={styles.submitButtonText}>
@@ -174,11 +174,11 @@ export const LocationForm: React.FC<LocationFormProps> = React.memo(({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
+    bottom: Platform.select({ios: 20, android: 16, default: 16}),
     left: 16,
     right: 16,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
+    padding: Platform.select({ios: 20, android: 14, default: 14}),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -186,51 +186,51 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 20,
+    fontSize: Platform.select({ios: 20, android: 18, default: 18}),
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   dropdown: {
-    height: 50,
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     borderColor: '#E8E8E8',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 12, android: 10, default: 10}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     backgroundColor: '#FFFFFF',
   },
   placeholderStyle: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#666',
   },
   selectedTextStyle: {
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#333',
   },
   icon: {
     marginRight: 8,
   },
   input: {
-    height: 50,
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     borderColor: '#E8E8E8',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    paddingHorizontal: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#333',
     backgroundColor: '#FFFFFF',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   textArea: {
-    height: 100,
+    height: Platform.select({ios: 100, android: 84, default: 84}),
     textAlignVertical: 'top',
     paddingTop: 12,
   },
   submitButton: {
     backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    height: 50,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     fontWeight: '600',
   },
 });

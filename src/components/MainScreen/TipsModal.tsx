@@ -11,13 +11,13 @@ import {
   View,
   Modal,
   ScrollView,
-  SafeAreaView,
   Text,
   StyleSheet,
   Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -52,6 +52,8 @@ interface TipsModalProps {
   setShowTipsModal: (_arg0: boolean) => void;
   currentSound: React.MutableRefObject<Sound | null>;
   isOnline?: boolean;
+  onDismiss?: () => void;
+  topInset?: number;
 }
 
 const HEADER_HEIGHT = 60;
@@ -66,7 +68,10 @@ const TipsModal: React.FC<TipsModalProps> = ({
   setShowTipsModal,
   currentSound,
   isOnline = true,
+  onDismiss,
+  topInset = 0,
 }) => {
+  const {width: windowWidth} = useWindowDimensions();
   const {userInfo} = useContext<any>(AuthContext);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeAudioKey, setActiveAudioKey] = useState<string | number | null>(
@@ -93,6 +98,9 @@ const TipsModal: React.FC<TipsModalProps> = ({
   const setLikedCache = async (arr: Tip[]) => saveToCache('likedTips', arr);
   const setDislikedCache = async (arr: Tip[]) =>
     saveToCache('dislikedTips', arr);
+  const modalTopInset =
+    topInset || (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0);
+  const contentHorizontalPadding = windowWidth < 380 ? 12 : 16;
 
   const cleanupSound = () => {
     if (currentSound.current) {
@@ -145,7 +153,7 @@ const TipsModal: React.FC<TipsModalProps> = ({
             },
           );
 
-          if (!res.ok) throw new Error('Failed to generate audio');
+          if (!res.ok) {throw new Error('Failed to generate audio');}
           const data = await res.json();
           audioUrl = `${BASE_URL}${data.audioUrl}`;
         } else {
@@ -165,7 +173,7 @@ const TipsModal: React.FC<TipsModalProps> = ({
             },
           );
 
-          if (!res.ok) throw new Error('Failed to generate audio');
+          if (!res.ok) {throw new Error('Failed to generate audio');}
           const data = await res.json();
           audioUrl = `${BASE_URL}${data.audioUrl}`;
         }
@@ -320,13 +328,16 @@ const TipsModal: React.FC<TipsModalProps> = ({
     <Modal
       visible={showTipsModal}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle={Platform.OS === 'ios' ? 'fullScreen' : undefined}
       onShow={() => Keyboard.dismiss()}
+      onDismiss={Platform.OS === 'ios' ? onDismiss : undefined}
       onRequestClose={() => {
-        console.log('onRequestClose fired');
         setShowTipsModal(false);
+        if (Platform.OS === 'android' && onDismiss) {
+          onDismiss();
+        }
       }}>
-      <SafeAreaView style={styles.modalContainer}>
+      <View style={[styles.modalContainer, {paddingTop: modalTopInset}]}>
         {/* HEADER */}
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle} numberOfLines={1}>
@@ -356,7 +367,10 @@ const TipsModal: React.FC<TipsModalProps> = ({
 
         {/* CONTENT */}
         <ScrollView
-          style={styles.modalContent}
+          style={[
+            styles.modalContent,
+            {paddingHorizontal: contentHorizontalPadding},
+          ]}
           keyboardShouldPersistTaps="always"
           contentContainerStyle={{paddingBottom: 28}}
           showsVerticalScrollIndicator={false}>
@@ -467,7 +481,7 @@ const TipsModal: React.FC<TipsModalProps> = ({
           {tips.length === 0 && <CardSkeleton />}
           <View style={{height: 20}} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };
@@ -478,7 +492,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   modalHeader: {
     height: HEADER_HEIGHT,
@@ -490,7 +503,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E8E8E8',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#333',
     flex: 1,
@@ -523,24 +536,42 @@ const styles = StyleSheet.create({
   tipItem: {marginBottom: 16},
   tipCardShadow: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
-  tipGradient: {borderRadius: 16, padding: 20},
+  tipGradient: {
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
+    padding: Platform.select({ios: 20, android: 14, default: 14}),
+  },
   tipHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  tipTitle: {fontSize: 18, fontWeight: 'bold', color: '#333', flex: 1},
-  tipBody: {fontSize: 16, color: '#444', lineHeight: 24, marginBottom: 12},
-  tipDetails: {fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 16},
+  tipTitle: {
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  tipBody: {
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
+    color: '#444',
+    lineHeight: Platform.select({ios: 24, android: 20, default: 20}),
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
+  },
+  tipDetails: {
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
+    color: '#666',
+    lineHeight: Platform.select({ios: 20, android: 18, default: 18}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
+  },
   tipActions: {flexDirection: 'row', alignItems: 'center', marginTop: 6},
   playButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: Platform.select({ios: 8, android: 7, default: 7}),
+    paddingHorizontal: Platform.select({ios: 12, android: 10, default: 10}),
+    borderRadius: Platform.select({ios: 8, android: 7, default: 7}),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -554,5 +585,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
-  iconReactionButton: {marginLeft: 8, padding: 6},
+  iconReactionButton: {
+    marginLeft: Platform.select({ios: 8, android: 6, default: 6}),
+    padding: Platform.select({ios: 6, android: 5, default: 5}),
+  },
 });

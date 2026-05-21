@@ -11,7 +11,7 @@ import { useLocationTracking } from './useLocationTracking';
 export const useAppStartup = () => {
   const { userInfo, isLoading: authLoading } = useContext(AuthContext);
   const { location, isLoading: locationLoading, retryLocation } = useLocationTracking();
-  
+
   const [isNetworkAvailable, setIsNetworkAvailable] = useState(true);
   const [startupComplete, setStartupComplete] = useState(false);
   const [startupError, setStartupError] = useState<string | null>(null);
@@ -38,13 +38,13 @@ export const useAppStartup = () => {
 
     // Exponential backoff: 1s, 2s, 4s
     const delay = Math.pow(2, retryAttempts) * 1000;
-    
+
     // Clear any previous error
     setStartupError(null);
-    
+
     // Wait for the backoff period
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     // Check network first
     const networkAvailable = await checkNetwork();
     if (!networkAvailable) {
@@ -55,7 +55,7 @@ export const useAppStartup = () => {
 
     // Try location services again
     retryLocation();
-    
+
     // Increment retry counter
     setRetryAttempts(prev => prev + 1);
   }, [retryAttempts, checkNetwork, retryLocation]);
@@ -70,7 +70,7 @@ export const useAppStartup = () => {
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     return () => {
       subscription.remove();
     };
@@ -80,11 +80,11 @@ export const useAppStartup = () => {
   useEffect(() => {
     const determineStartupStatus = async () => {
       // If auth is still loading, wait for it
-      if (authLoading) return;
-      
+      if (authLoading) {return;}
+
       // Check if we're logged in (have a token)
       const isLoggedIn = Boolean(userInfo?.access_token);
-      
+
       if (!isLoggedIn) {
         // If not logged in, we can consider startup complete
         // (login screen doesn't need location or other data)
@@ -100,8 +100,8 @@ export const useAppStartup = () => {
       }
 
       // For logged in users, check if location is available
-      if (locationLoading) return;
-      
+      if (locationLoading) {return;}
+
       if (!location && retryAttempts < 3) {
         // If location isn't available yet and we haven't exhausted retries
         // trigger a retry

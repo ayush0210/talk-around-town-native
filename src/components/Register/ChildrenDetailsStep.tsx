@@ -42,7 +42,7 @@ const ChildrenDetailsStep: React.FC<ChildrenDetailsStepProps> = ({
   return (
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
-        <RenderBackButton />
+        {RenderBackButton()}
 
         <View style={{flexDirection: 'column', alignItems: 'center'}}>
           <Text style={styles.stepTitle}>Children Details</Text>
@@ -128,33 +128,33 @@ const styles = StyleSheet.create({
   },
   childDetailCard: {
     backgroundColor: '#F8F9FA',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: Platform.select({ios: 16, android: 14, default: 14}),
+    padding: Platform.select({ios: 20, android: 14, default: 14}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
   childNumber: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   childInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
+    padding: Platform.select({ios: 12, android: 10, default: 10}),
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
     color: '#1F2937',
   },
   pickerWrapper: {
     width: '100%',
   },
   pickerLabel: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 12, default: 12}),
     color: '#666666',
     marginBottom: 8,
   },
@@ -162,11 +162,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
+    borderRadius: Platform.select({ios: 12, android: 10, default: 10}),
     overflow: 'hidden',
   },
   picker: {
-    height: 50,
+    height: Platform.select({ios: 50, android: 44, default: 44}),
     backgroundColor: '#FFFFFF',
     color: '#1F2937',
   },
@@ -179,16 +179,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 12, default: 12}),
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: Platform.select({ios: 24, android: 22, default: 22}),
     fontWeight: 'bold',
     color: '#333333',
     marginBottom: 6,
   },
   stepDescription: {
-    fontSize: 14,
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
     color: '#666666',
     marginBottom: 6,
     flexWrap: 'wrap',

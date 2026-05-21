@@ -37,7 +37,7 @@ const PersonalizationSurvey: React.FC<{
 
   // Pre-populate from server when modal opens
   useEffect(() => {
-    if (!visible || !userInfo?.access_token) return;
+    if (!visible || !userInfo?.access_token) {return;}
     fetch(`${BASE_URL}/api/personalization/survey`, {
       headers: {Authorization: `Bearer ${userInfo.access_token}`},
     })

@@ -147,7 +147,7 @@ notifee.onBackgroundEvent(async ({type, detail}) => {
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
     // Skip recording-related notifications — they don't navigate to tips
-    if (d.type === 'recording') return;
+    if (d.type === 'recording') {return;}
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
     console.log('📲 Notifee background press:', {title, body});
@@ -164,7 +164,7 @@ notifee.onForegroundEvent(({type, detail}) => {
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
     // Skip recording-related notifications — they don't navigate to tips
-    if (d.type === 'recording') return;
+    if (d.type === 'recording') {return;}
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
     console.log('📲 Notifee foreground press:', {title, body});
