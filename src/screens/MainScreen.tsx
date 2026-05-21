@@ -25,6 +25,8 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   ScrollView,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import MapView, {Marker, Circle} from 'react-native-maps';
 import {Dropdown} from 'react-native-element-dropdown';
@@ -58,6 +60,12 @@ import {CopilotStep, useCopilot, walkthroughable} from 'react-native-copilot';
 import PreferencesCard from '../components/MainScreen/PreferencesCard';
 import {BASE_URL, WS_BASE_URL} from '../config';
 import {OFFLINE_TIPS} from '../data/offlineTips';
+import ActivitySuggestionModal from '../components/ActivitySuggestionModal';
+import {ACTIVITY_CATEGORIES} from '../data/activities';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 const STARTUP_CONFIG = {
   MAX_STARTUP_TIME: 8000,
@@ -197,7 +205,7 @@ const MapViewModal = React.memo(function MapViewModal({
   ]);
 
   const saveLocation = useCallback(async () => {
-    if (!newLocation) return;
+    if (!newLocation) {return;}
     try {
       const res = await fetchWithAuth(
         `${API_ENDPOINTS.BASE_URL}${API_ENDPOINTS.ADD_LOCATION}`,
@@ -531,7 +539,7 @@ const surveyKeys = (userKey: string) => ({
 });
 
 const isDue = (lastPromptTs?: number | null, days = REMIND_EVERY_DAYS) => {
-  if (!lastPromptTs) return true; // never prompted → show
+  if (!lastPromptTs) {return true;} // never prompted → show
   return Date.now() - Number(lastPromptTs) >= days * MS_PER_DAY;
 };
 
@@ -548,7 +556,7 @@ function ageInMonthsFromDob(dobIso: string, at: Date = new Date()): number {
   let months =
     (at.getFullYear() - dob.getFullYear()) * MONTHS_PER_YEAR +
     (at.getMonth() - dob.getMonth());
-  if (at.getDate() < dob.getDate()) months -= 1;
+  if (at.getDate() < dob.getDate()) {months -= 1;}
   return Math.max(0, months);
 }
 
@@ -607,8 +615,8 @@ function matchChildrenByAge(
   for (const c of children) {
     const childAgeMonths = ageInMonthsFromDob(c.date_of_birth);
     const diff = Math.abs(childAgeMonths - expressedAgeMonths);
-    if (diff <= exactCutoff) exact.push(c as Child);
-    else if (diff <= tolerance) close.push(c as Child);
+    if (diff <= exactCutoff) {exact.push(c as Child);}
+    else if (diff <= tolerance) {close.push(c as Child);}
   }
   return {exact, close};
 }
@@ -616,8 +624,8 @@ function matchChildrenByAge(
 function monthsToPretty(m: number): string {
   const y = Math.floor(m / 12);
   const mm = m % 12;
-  if (y > 0 && mm > 0) return `${y}y ${mm}m`;
-  if (y > 0) return `${y}y`;
+  if (y > 0 && mm > 0) {return `${y}y ${mm}m`;}
+  if (y > 0) {return `${y}y`;}
   return `${mm}m`;
 }
 
@@ -625,7 +633,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
 
   // Context & refs
-  const {userInfo, isLoading} = useContext<any>(AuthContext);
+  const {userInfo, isLoading, getValidToken} = useContext<any>(AuthContext);
   const lastResult = useRef<string>('');
   const accumulatedText = useRef<string>('');
   const currentSound = useRef<Sound | null>(null);
@@ -636,6 +644,8 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
   const [statusMessage, setStatusMessage] = useState<string>('Starting app...');
   const [showMapView, setShowMapView] = useState(false);
   const [showTipsModal, setShowTipsModal] = useState(false);
+  const [showActivitiesModal, setShowActivitiesModal] = useState(false);
+  const pendingAlertRef = useRef<(() => void) | null>(null);
 
   // Data
   const [userChildren, setUserChildren] = useState<Child[]>([]);
@@ -777,7 +787,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
   // Optional: re-evaluate when screen regains focus (prevents accidental double prompts)
   useFocusEffect(
     useCallback(() => {
-      if (!bootChecked) return;
+      if (!bootChecked) {return;}
       // re-check on focus only if not completed & we're not already showing it
       if (!surveyCompleted && !showSurvey) {
         loadStatus();
@@ -906,16 +916,27 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
   // Keyboard animation
   const keyboardAnimation = useRef(new Animated.Value(0)).current;
 
-  const keyboardAnimatedStyle = {
+  const keyboardAnimatedStyle = Platform.OS === 'ios' ? {
     transform: [
       {
         translateY: keyboardAnimation.interpolate({
           inputRange: [0, 1],
-          outputRange: [0, -350], // Move companion card up by 350px when keyboard appears
+          outputRange: [0, -350],
         }),
       },
     ],
-  };
+  } : {};
+
+  const androidCompanionKeyboardStyle = Platform.OS === 'android' ? {
+    transform: [
+      {
+        translateY: keyboardAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -190],
+        }),
+      },
+    ],
+  } : {};
 
   // Style for content preferences to fade out when keyboard appears
   const preferencesKeyboardStyle = {
@@ -935,24 +956,36 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
 
   // Keyboard listeners
   useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
+      showEvent,
       () => {
+        if (Platform.OS === 'ios') {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        }
         setIsKeyboardVisible(true);
         Animated.timing(keyboardAnimation, {
           toValue: 1,
-          duration: 250,
+          duration: Platform.OS === 'android' ? 280 : 250,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }).start();
       },
     );
     const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
+      hideEvent,
       () => {
+        if (Platform.OS === 'ios') {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        }
         setIsKeyboardVisible(false);
         Animated.timing(keyboardAnimation, {
           toValue: 0,
-          duration: 250,
+          duration: Platform.OS === 'android' ? 220 : 250,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }).start();
       },
@@ -994,7 +1027,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
           const saved = await AsyncStorage.getItem('contentPreferences');
           if (alive && saved) {
             const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed)) setContentPreferences(parsed);
+            if (Array.isArray(parsed)) {setContentPreferences(parsed);}
           }
         } catch (e) {
           console.warn('reload contentPreferences failed:', e);
@@ -1154,27 +1187,27 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
         const cachedKids = await loadFromCache(
           LOCATION_CONFIG.CACHE_KEYS.CHILDREN_INFO,
         );
-        if (cachedKids) setUserChildren(cachedKids);
+        if (cachedKids) {setUserChildren(cachedKids);}
         const liked = await loadFromCache('likedTips');
-        if (Array.isArray(liked)) setLikedTips(liked);
+        if (Array.isArray(liked)) {setLikedTips(liked);}
         const disliked = await loadFromCache('dislikedTips');
-        if (Array.isArray(disliked)) setDislikedTips(disliked);
+        if (Array.isArray(disliked)) {setDislikedTips(disliked);}
         const savedPrefs = await AsyncStorage.getItem('contentPreferences');
         if (savedPrefs) {
           const parsed = JSON.parse(savedPrefs);
           if (Array.isArray(parsed) && parsed.length)
-            setContentPreferences(parsed);
+            {setContentPreferences(parsed);}
         }
 
         // Quick location
         setStatusMessage('Getting your location...');
         const quickLoc = await getQuickLocation();
-        if (mounted) setLocation(quickLoc);
+        if (mounted) {setLocation(quickLoc);}
 
         // Show UI
         setStatusMessage('Loading interface...');
         await new Promise(r => setTimeout(r, 100));
-        if (mounted) setMainLoading(false);
+        if (mounted) {setMainLoading(false);}
 
         // Background refresh
         refreshDataInBackground();
@@ -1220,7 +1253,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
               buttonPositive: 'OK',
             },
           );
-          if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {return;}
         }
 
         Voice.onSpeechResults = (e: any) => {
@@ -1265,7 +1298,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
   // Queue & network sync for reactions
   const flushAIReactionsQueue = useCallback(async () => {
     const queue = (await loadFromCache('aiReactionsQueue')) ?? [];
-    if (!queue.length || !userInfo?.access_token) return;
+    if (!queue.length || !userInfo?.access_token) {return;}
     const remaining = [];
     for (const item of queue) {
       try {
@@ -1293,7 +1326,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(s => {
-      if (s.isConnected) flushAIReactionsQueue();
+      if (s.isConnected) {flushAIReactionsQueue();}
     });
     flushAIReactionsQueue();
     return () => unsub();
@@ -1375,7 +1408,7 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
     const birth = new Date(dob);
     let age = today.getFullYear() - birth.getFullYear();
     const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {age--;}
     return age;
   };
 
@@ -1390,10 +1423,10 @@ const MainScreen: React.FC<Props> = ({navigation}) => {
       } else {
         const ok = await Voice.isAvailable();
         if (!ok)
-          return Alert.alert(
+          {return Alert.alert(
             'Error',
             'Voice recognition is not available on this device.',
-          );
+          );}
         setSearchText('');
         lastResult.current = '';
         accumulatedText.current = '';
@@ -1591,21 +1624,27 @@ Try asking about one of these topics!`;
     return {valid: true};
   }
 
-  function showDomainRejectionAlert(message: string) {
-    setShowTipsModal(false); // close modal first
-    Alert.alert('Topic Not Supported', message, [
-      {
-        text: 'See Examples',
-        onPress: () => {
-          Alert.alert(
-            'Try asking about:',
-            EXAMPLE_QUERIES.map(q => `• ${q}`).join('\n'),
-            [{text: 'OK'}],
-          );
-        },
-      },
-      {text: 'OK', style: 'cancel'},
-    ]);
+  function showDomainRejectionAlert(_message: string) {
+    const childName = userChildren[0]?.nickname || 'Jesse';
+    const showAlert = () => {
+      Keyboard.dismiss();
+      Alert.alert(
+        'Parenting Tips Only',
+        `ENACT only provides parenting tips for children ages 0–5.\n\nTry asking:\n• "Tips for ${childName} at the park"\n• "Tips for bath time"\n• "Tips for reading together"`,
+        [
+          {text: 'View Activities', onPress: () => setShowActivitiesModal(true)},
+          {text: 'Got it', style: 'cancel'},
+        ],
+      );
+    };
+    if (Platform.OS === 'ios' && showTipsModal) {
+      // Modal is open — defer alert until it fully closes so it doesn't land behind it
+      pendingAlertRef.current = showAlert;
+      setShowTipsModal(false);
+    } else {
+      setShowTipsModal(false);
+      showAlert();
+    }
   }
 
   // Words that strongly indicate the user is asking about a child/parenting topic
@@ -1654,7 +1693,7 @@ Try asking about one of these topics!`;
       i,
       ...Array(b.length).fill(0),
     ]);
-    for (let j = 1; j <= b.length; j++) m[0][j] = j;
+    for (let j = 1; j <= b.length; j++) {m[0][j] = j;}
     for (let i = 1; i <= a.length; i++) {
       for (let j = 1; j <= b.length; j++) {
         const cost = a[i - 1] === b[j - 1] ? 0 : 1;
@@ -1673,11 +1712,11 @@ Try asking about one of these topics!`;
 
   // Age in years & months for nicer prompts
   const ageYMMM = (dob: string | undefined) => {
-    if (!dob) return 'Unknown age';
+    if (!dob) {return 'Unknown age';}
 
     const birth = new Date(dob);
     // Check if date is invalid
-    if (isNaN(birth.getTime())) return 'Unknown age';
+    if (isNaN(birth.getTime())) {return 'Unknown age';}
 
     const now = new Date();
     let years = now.getFullYear() - birth.getFullYear();
@@ -1691,8 +1730,8 @@ Try asking about one of these topics!`;
       months += 12;
     }
     // e.g., "3y 2m", "11m", "4y"
-    if (years <= 0 && months > 0) return `${months}m`;
-    if (years >= 0 && months > 0) return `${years}y ${months}m`;
+    if (years <= 0 && months > 0) {return `${months}m`;}
+    if (years >= 0 && months > 0) {return `${years}y ${months}m`;}
     return `${years}y`;
   };
 
@@ -1704,7 +1743,7 @@ Try asking about one of these topics!`;
 
     for (const c of children) {
       const name = normalize(c.nickname || '');
-      if (!name) continue;
+      if (!name) {continue;}
       // exact word hit (handles "Aarav", "Aarav's")
       const exact =
         words.has(name) || q.includes(`${name}'s`) || q.includes(`my ${name}`);
@@ -1725,7 +1764,7 @@ Try asking about one of these topics!`;
     for (const h of hits) {
       const key = normalize(h.child.nickname || '');
       if (!uniq[key] || (uniq[key].how === 'fuzzy' && h.how === 'exact'))
-        uniq[key] = h;
+        {uniq[key] = h;}
     }
     return Object.values(uniq).map(x => x.child);
   }
@@ -1750,7 +1789,7 @@ Try asking about one of these topics!`;
       let matched: Child | null = null;
       for (const c of children) {
         const name = (c.nickname || '').toLowerCase();
-        if (!name) continue;
+        if (!name) {continue;}
         if (t === name) {
           matched = c;
           break;
@@ -1774,7 +1813,7 @@ Try asking about one of these topics!`;
         }
       } else {
         // Keep token if it looks like a name-ish token (3–20 chars, letters only)
-        if (/^[a-z]{3,20}$/.test(t)) unknown.push(t);
+        if (/^[a-z]{3,20}$/.test(t)) {unknown.push(t);}
       }
     }
 
@@ -1800,10 +1839,10 @@ Try asking about one of these topics!`;
     return {known, unknown: uniqUnknown};
   }
 
-  const getPersonalizedTips = async () => {
+  const getPersonalizedTips = async (queryOverride?: string) => {
     console.log('getPersonalizedTips called, current isAssistantLoading:', isAssistantLoading);
 
-    const query = searchText?.trim();
+    const query = (queryOverride ?? searchText)?.trim();
     if (!query) {
       return Alert.alert(
         'Input Required',
@@ -1898,7 +1937,7 @@ Try asking about one of these topics!`;
 
     const childLines = (mentioned.length ? mentioned : userChildren).map(c => {
       const nm = c.nickname || 'Child';
-      if (c.age) return `${nm}: ${c.age} year${c.age === 1 ? '' : 's'} old`;
+      if (c.age) {return `${nm}: ${c.age} year${c.age === 1 ? '' : 's'} old`;}
       const ageStr = ageYMMM(c.date_of_birth);
       return ageStr === 'Unknown age' ? nm : `${nm}: ${ageStr} old`;
     });
@@ -1927,18 +1966,29 @@ Try asking about one of these topics!`;
 
     // ── NEW: open the WS and stream tips ─────────────────────────────────
     try {
-      // IMPORTANT: token in handshake query
+      // Refresh the token if it has expired or is about to expire.
+      let token: string;
+      try {
+        token = await getValidToken();
+      } catch {
+        Alert.alert('Session Expired', 'Please sign in again.');
+        return;
+      }
+
       let openedAt: number | null = null;
       const wsUrl = `${
         API_ENDPOINTS.WS_BASE_URL
-      }/ws/personalization?token=${encodeURIComponent(userInfo.access_token)}`;
+      }/ws/personalization?token=${encodeURIComponent(token)}`;
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       setIsStreaming(true);
 
+      // Clear any stale pending alert before opening modal
+      pendingAlertRef.current = null;
       // open modal early so user sees tips appear
       setShowTipsModal(true);
+      let tipsReceived = false;
 
       ws.onopen = () => {
         openedAt = Date.now();
@@ -1974,35 +2024,31 @@ Try asking about one of these topics!`;
             // phases like 'openai:starting', 'openai:streaming'
             break;
 
-          case 'out_of_scope':
-            // mirror your REST rejection UX
+          case 'out_of_scope': {
             closeWS();
             setIsAssistantLoading(false);
-            Alert.alert(
-              'Topic Not Supported',
-              msg.payload?.message || REJECTION_MESSAGE,
+            const childName = userChildren[0]?.nickname || 'Jesse';
+            const showOutOfScopeAlert = () => Alert.alert(
+              'Parenting Tips Only',
+              `ENACT only provides parenting tips for children ages 0–5.\n\nTry asking:\n• "Tips for ${childName} at the park"\n• "Tips for bath time"\n• "Tips for reading together"`,
               [
-                {
-                  text: 'See Examples',
-                  onPress: () =>
-                    Alert.alert(
-                      'Try asking about:',
-                      EXAMPLE_QUERIES.map(q => `• ${q}`).join('\n'),
-                      [{text: 'OK'}],
-                    ),
-                },
-                {
-                  text: 'OK',
-                  style: 'cancel',
-                  onPress: () => setShowTipsModal(false),
-                },
+                {text: 'View Activities', onPress: () => setShowActivitiesModal(true)},
+                {text: 'Got it', style: 'cancel'},
               ],
             );
+            if (Platform.OS === 'ios') {
+              pendingAlertRef.current = showOutOfScopeAlert;
+              setShowTipsModal(false);
+            } else {
+              setShowTipsModal(false);
+              showOutOfScopeAlert();
+            }
             break;
+          }
 
           case 'tip': {
             console.log('messageTime,', messageTime - openedAt!);
-            // one tip at a time (scored) → append
+            tipsReceived = true;
             const t: Tip = msg.data;
             setTips(prev => {
               const next = [...prev, t];
@@ -2013,7 +2059,7 @@ Try asking about one of these topics!`;
           }
 
           case 'batch': {
-            // DB fallback returned an array
+            tipsReceived = true;
             const items: Tip[] = msg.items || [];
             setTips(prev => {
               const next = [...prev, ...items];
@@ -2024,39 +2070,42 @@ Try asking about one of these topics!`;
           }
 
           case 'error':
-            setStreamError(msg.message || 'Stream error');
+            closeWS();
+            setIsAssistantLoading(false);
+            if (!tipsReceived) {
+              setShowTipsModal(false);
+              Alert.alert(
+                'Error',
+                msg.message === 'Unauthorized'
+                  ? 'Your session has expired. Please sign in again.'
+                  : 'Failed to load tips. Please try again.',
+                [{text: 'OK', style: 'cancel'}],
+              );
+            }
             break;
 
           case 'done':
-            console.log('Received done message, closing WS and setting loading=false');
             closeWS();
             setIsAssistantLoading(false);
-            // Check if no tips were received using a ref to avoid closure issues
-            setTimeout(() => {
-              // Use the current state value instead of the stale closure value
-              setTips(currentTips => {
-                if (currentTips.length === 0) {
-                  Alert.alert(
-                    'No Tips Found',
-                    'Try asking about reading, science exploration, social skills, or language activities.',
-                    [
-                      {
-                        text: 'See Examples',
-                        onPress: () =>
-                          Alert.alert(
-                            'Try asking about:',
-                            EXAMPLE_QUERIES.map(q => `• ${q}`).join('\n'),
-                            [{text: 'OK'}],
-                          ),
-                      },
-                      {text: 'OK', style: 'cancel'},
-                    ],
-                  );
-                  setShowTipsModal(false); // optional
-                }
-                return currentTips; // Return unchanged state
+            if (!tipsReceived) {
+              Keyboard.dismiss();
+              setShowTipsModal(false);
+              Alert.alert(
+                'No Tips Found',
+                'Try asking about reading, science exploration, social skills, or language activities.',
+                [{text: 'OK', style: 'cancel'}],
+              );
+            } else {
+              // Sort so tips matching selected content preferences appear first
+              setTips(prev => {
+                if (prev.length <= 1 || !contentPreferences.length) {return prev;}
+                return [...prev].sort((a, b) => {
+                  const aMatch = (a.categories || []).some(c => contentPreferences.includes(c)) ? 0 : 1;
+                  const bMatch = (b.categories || []).some(c => contentPreferences.includes(c)) ? 0 : 1;
+                  return aMatch - bMatch;
+                });
               });
-            }, 0);
+            }
             break;
 
           // 'ping' etc. are ignored
@@ -2067,6 +2116,9 @@ Try asking about one of these topics!`;
 
       ws.onerror = () => {
         setStreamError('Connection error');
+        setIsAssistantLoading(false);
+        // Do NOT close the modal — on Android ws.close() can fire onerror
+        // before onclose, which would wipe visible tips.
       };
 
       ws.onclose = e => {
@@ -2083,9 +2135,13 @@ Try asking about one of these topics!`;
             reason: e.reason,
           });
         }
-        console.log('Setting isStreaming=false and isAssistantLoading=false in onclose');
         setIsStreaming(false);
         setIsAssistantLoading(false);
+        // If the socket closed without delivering any tips or a done message,
+        // dismiss the skeleton-card modal so the user isn't stuck.
+        if (!tipsReceived) {
+          setShowTipsModal(false);
+        }
       };
     } catch (e) {
       console.error('ws error', e);
@@ -2294,7 +2350,7 @@ Try asking about one of these topics!`;
           value={searchText}
           onChangeText={setSearchText}
           placeholder={
-            isListening ? 'Listening...' : 'e.g., vocabulary tips for Jesse at the park'
+            isListening ? 'Listening...' : 'e.g., tips for Jesse at the park'
           }
           placeholderTextColor="#9AA0A6"
           multiline
@@ -2308,7 +2364,8 @@ Try asking about one of these topics!`;
             // Trigger keyboard animation when input is focused
             Animated.timing(keyboardAnimation, {
               toValue: 1,
-              duration: 250,
+              duration: Platform.OS === 'android' ? 220 : 250,
+              easing: Easing.out(Easing.ease),
               useNativeDriver: true,
             }).start();
           }}
@@ -2316,7 +2373,8 @@ Try asking about one of these topics!`;
             // Reset animation when input loses focus
             Animated.timing(keyboardAnimation, {
               toValue: 0,
-              duration: 250,
+              duration: Platform.OS === 'android' ? 220 : 250,
+              easing: Easing.out(Easing.ease),
               useNativeDriver: true,
             }).start();
           }}
@@ -2333,9 +2391,15 @@ Try asking about one of these topics!`;
         </TouchableOpacity>
       </View>
 
+      {!isListening && !searchText && (
+        <Text style={{fontSize: 12, color: '#9AA0A6', marginHorizontal: 4, marginTop: 4, marginBottom: 2}}>
+          Try: <Text style={{color: '#6366F1', fontWeight: '600'}}>"Tips for {userChildren[0]?.nickname || 'Jesse'} at the park"</Text>
+        </Text>
+      )}
+
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={isAssistantLoading ? cancelTips : getPersonalizedTips}
+        onPress={isAssistantLoading ? cancelTips : () => getPersonalizedTips()}
         style={{borderRadius: 22, overflow: 'hidden', marginBottom: 12}}>
         <LinearGradient
           colors={isAssistantLoading ? ['#EF4444', '#DC2626'] : ['#3B82F6', '#7C4DFF']}
@@ -2543,105 +2607,150 @@ Try asking about one of these topics!`;
             colors={['#3B82F6', '#8B5CF6']}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 1}}
-            style={styles.headerBar}></LinearGradient>
+            style={styles.headerBar}
+          />
           <View
             style={{
-              paddingHorizontal: 20,
-            paddingTop: insets.top + 5,
-          }}>
-          <View style={styles.topRow}>
-            <View>
-              <Text style={styles.appName}>ENACT</Text>
-              <Text style={styles.tagline}>
-                Your trusted Parenting Companion
-              </Text>
-            </View>
-
-            <View style={{alignItems: 'center'}}>
-              <CopilotStep
-                order={1}
-                name="Saved Locations"
-                text="View your saved locations here!">
-                <WalkthroughableView style={{}} collapsable={false}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate('LocationList', {locations, details})
-                    }
-                    style={styles.iconBtn}
-                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                    <MaterialIcons name="place" size={22} color="#5973FF" />
-                  </TouchableOpacity>
-                </WalkthroughableView>
-              </CopilotStep>
-              <Text style={{fontSize: 9, color: '#5973FF', fontWeight: '700', marginTop: 3, letterSpacing: 0.3}}>
-                Locations
-              </Text>
-            </View>
-          </View>
-
-          <CopilotStep
-            order={2}
-            name="Search Locations"
-            text="Search for nearby locations!">
-            <WalkthroughableView style={styles.searchRow} collapsable={false}>
-              <TouchableOpacity
-                style={styles.heroSearch}
-                activeOpacity={0.9}
-                onPress={() => setShowMapView(true)}>
-                <MaterialIcons name="location-on" size={18} color="#9AA0A6" />
-                <Text style={styles.heroSearchText}>
-                  Find nearby locations...
+              paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16}),
+              paddingTop: insets.top + 5,
+            }}>
+            <View style={styles.topRow}>
+              <View>
+                <Text style={styles.appName}>ENACT</Text>
+                <Text style={styles.tagline}>
+                  Your trusted Parenting Companion
                 </Text>
-              </TouchableOpacity>
-            </WalkthroughableView>
-          </CopilotStep>
-        </View>
+              </View>
 
-        <View style={{flex: 1}}>
-          {/* Content Preferences Card */}
-          <Animated.View
-            style={[
-              {paddingHorizontal: 20},
-              preferencesCardStyle,
-              preferencesKeyboardStyle,
-            ]}>
+              <View style={{alignItems: 'center'}}>
+                <CopilotStep
+                  order={1}
+                  name="Saved Locations"
+                  text="View your saved locations here!">
+                  <WalkthroughableView style={{}} collapsable={false}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate('LocationList', {locations, details})
+                      }
+                      style={styles.iconBtn}
+                      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                      <MaterialIcons name="place" size={22} color="#5973FF" />
+                    </TouchableOpacity>
+                  </WalkthroughableView>
+                </CopilotStep>
+                <Text style={{fontSize: 9, color: '#5973FF', fontWeight: '700', marginTop: 3, letterSpacing: 0.3}}>
+                  Locations
+                </Text>
+              </View>
+            </View>
+
             <CopilotStep
-              order={3}
-              name="Content preferences"
-              text="Select your preferences by tapping here!">
-              <WalkthroughableView style={styles.card}>
-                <Text style={styles.cardTitle}>Content Preferences</Text>
-                <PreferencesCard
-                  navigation={navigation}
-                  contentPreferences={contentPreferences}
-                />
+              order={2}
+              name="Search Locations"
+              text="Search for nearby locations!">
+              <WalkthroughableView style={styles.searchRow} collapsable={false}>
+                <TouchableOpacity
+                  style={styles.heroSearch}
+                  activeOpacity={0.9}
+                  onPress={() => setShowMapView(true)}>
+                  <MaterialIcons name="location-on" size={18} color="#9AA0A6" />
+                  <Text style={styles.heroSearchText}>
+                    Find nearby locations...
+                  </Text>
+                </TouchableOpacity>
               </WalkthroughableView>
             </CopilotStep>
-          </Animated.View>
+          </View>
 
-          {/* Ask your companion Card */}
-          <Animated.View
-            style={[
-              {paddingHorizontal: 20},
-              askCompanionCardStyle,
-              keyboardAnimatedStyle,
-            ]}>
-            {tourRunning ? (
+        {Platform.OS === 'ios' ? (
+          // ── iOS: original layout, keyboard slides companion card up ──
+          <View style={{flex: 1}}>
+            <Animated.View
+              style={[
+                {paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16})},
+                preferencesCardStyle,
+                preferencesKeyboardStyle,
+              ]}>
               <CopilotStep
-                order={4}
-                name="Companion"
-                text="Ask for parenting tips here!">
-                {AskCompanionCard}
+                order={3}
+                name="Content preferences"
+                text="Select your preferences by tapping here!">
+                <WalkthroughableView style={styles.card}>
+                  <Text style={styles.cardTitle}>Content Preferences</Text>
+                  <PreferencesCard
+                    navigation={navigation}
+                    contentPreferences={contentPreferences}
+                  />
+                </WalkthroughableView>
               </CopilotStep>
-            ) : (
-              AskCompanionCard
-            )}
-          </Animated.View>
-        </View>
+            </Animated.View>
+            <Animated.View
+              style={[
+                {paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16})},
+                askCompanionCardStyle,
+                keyboardAnimatedStyle,
+              ]}>
+              {tourRunning ? (
+                <CopilotStep
+                  order={4}
+                  name="Companion"
+                  text="Ask for parenting tips here!">
+                  {AskCompanionCard}
+                </CopilotStep>
+              ) : (
+                AskCompanionCard
+              )}
+            </Animated.View>
+          </View>
+        ) : (
+          // ── Android: keep the tree stable and animate instead of removing views ──
+          <View style={{flex: 1}}>
+            <Animated.View
+              pointerEvents={isKeyboardVisible ? 'none' : 'auto'}
+              style={[
+                {paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16})},
+                preferencesCardStyle,
+                preferencesKeyboardStyle,
+              ]}>
+              <CopilotStep
+                order={3}
+                name="Content preferences"
+                text="Select your preferences by tapping here!">
+                <WalkthroughableView style={styles.card}>
+                  <Text style={styles.cardTitle}>Content Preferences</Text>
+                  <PreferencesCard
+                    navigation={navigation}
+                    contentPreferences={contentPreferences}
+                  />
+                </WalkthroughableView>
+              </CopilotStep>
+            </Animated.View>
+            <Animated.View
+              style={[
+                {paddingHorizontal: Platform.select({ios: 20, android: 16, default: 16})},
+                androidCompanionKeyboardStyle,
+              ]}>
+              {tourRunning ? (
+                <CopilotStep
+                  order={4}
+                  name="Companion"
+                  text="Ask for parenting tips here!">
+                  {AskCompanionCard}
+                </CopilotStep>
+              ) : (
+                AskCompanionCard
+              )}
+            </Animated.View>
+          </View>
+        )}
 
         {/* Floating pill nav */}
         {!isKeyboardVisible && (
-          <View style={styles.pillNav}>
+          <View
+            style={[
+              styles.pillNav,
+              {bottom: Math.max(Platform.OS === 'android' ? 18 : 22, insets.bottom + 8)},
+            ]}>
             <TouchableOpacity style={[styles.pillItem, styles.pillItemActive]}>
               <Text style={[styles.pillText, styles.pillTextActive]}>Home</Text>
             </TouchableOpacity>
@@ -2665,6 +2774,14 @@ Try asking about one of these topics!`;
         showTipsModal={showTipsModal}
         setShowTipsModal={setShowTipsModal}
         isOnline={isOnline}
+        topInset={insets.top}
+        onDismiss={() => {
+          if (pendingAlertRef.current) {
+            const fn = pendingAlertRef.current;
+            pendingAlertRef.current = null;
+            fn();
+          }
+        }}
       />
       <MapViewModal
         visible={showMapView}
@@ -2674,6 +2791,11 @@ Try asking about one of these topics!`;
         initialRegion={location}
         token={userInfo?.access_token || ''}
         onRefresh={refreshDataInBackground}
+      />
+      <ActivitySuggestionModal
+        visible={showActivitiesModal}
+        onClose={() => setShowActivitiesModal(false)}
+        token={userInfo?.access_token ?? null}
       />
 
       <Modal
@@ -2762,21 +2884,39 @@ Try asking about one of these topics!`;
 
                         // Use WebSocket streaming (same as normal flow)
                         let openedAt: number | null = null;
+                        let tipsReceived = false;
+                        // Only open the modal once we know tips are coming — avoids
+                        // race conditions where out_of_scope arrives before the iOS
+                        // modal open animation finishes (~300ms).
+                        let modalShown = false;
+                        const openModalIfNeeded = () => {
+                          if (!modalShown) {
+                            modalShown = true;
+                            pendingAlertRef.current = null;
+                            setShowTipsModal(true);
+                          }
+                        };
+
+                        let wsToken: string;
+                        try {
+                          wsToken = await getValidToken();
+                        } catch {
+                          Alert.alert('Session Expired', 'Please sign in again.');
+                          setIsAssistantLoading(false);
+                          return;
+                        }
+
                         const wsUrl = `${
                           API_ENDPOINTS.WS_BASE_URL
-                        }/ws/personalization?token=${encodeURIComponent(userInfo.access_token)}`;
+                        }/ws/personalization?token=${encodeURIComponent(wsToken)}`;
 
                         const ws = new WebSocket(wsUrl);
                         wsRef.current = ws;
                         setIsStreaming(true);
 
-                        // Open modal early so user sees tips appear
-                        setShowTipsModal(true);
-
                         ws.onopen = () => {
                           openedAt = Date.now();
                           console.log('[RN] WS OPEN (from modal)');
-                          // First message must be {type:'start', ...}
                           ws.send(
                             JSON.stringify({
                               type: 'start',
@@ -2803,33 +2943,40 @@ Try asking about one of these topics!`;
                             case 'phase':
                               break;
 
-                            case 'out_of_scope':
+                            case 'out_of_scope': {
                               closeWS();
                               setIsAssistantLoading(false);
-                              Alert.alert(
-                                'Topic Not Supported',
-                                msg.payload?.message || REJECTION_MESSAGE,
-                                [
-                                  {
-                                    text: 'See Examples',
-                                    onPress: () =>
-                                      Alert.alert(
-                                        'Try asking about:',
-                                        EXAMPLE_QUERIES.map(q => `• ${q}`).join('\n'),
-                                        [{text: 'OK'}],
-                                      ),
-                                  },
-                                  {
-                                    text: 'OK',
-                                    style: 'cancel',
-                                    onPress: () => setShowTipsModal(false),
-                                  },
-                                ],
-                              );
+                              const showChildOutOfScopeAlert = () => {
+                                Keyboard.dismiss();
+                                Alert.alert(
+                                  'Parenting Tips Only',
+                                  'ENACT only provides parenting tips for children ages 0–5.\n\nTry asking:\n• "Tips for bath time"\n• "Tips for reading together"\n• "Tips for outdoor play"',
+                                  [
+                                    {text: 'View Activities', onPress: () => setShowActivitiesModal(true)},
+                                    {text: 'Got it', style: 'cancel'},
+                                  ],
+                                );
+                              };
+                              if (modalShown) {
+                                // Modal is open — defer alert until it fully closes
+                                if (Platform.OS === 'ios') {
+                                  pendingAlertRef.current = showChildOutOfScopeAlert;
+                                  setShowTipsModal(false);
+                                } else {
+                                  setShowTipsModal(false);
+                                  showChildOutOfScopeAlert();
+                                }
+                              } else {
+                                // Modal was never opened — show alert directly
+                                showChildOutOfScopeAlert();
+                              }
                               break;
+                            }
 
                             case 'tip': {
                               console.log('messageTime (from modal)', messageTime - openedAt!);
+                              tipsReceived = true;
+                              openModalIfNeeded();
                               const t: Tip = msg.data;
                               setTips(prev => {
                                 const next = [...prev, t];
@@ -2840,6 +2987,8 @@ Try asking about one of these topics!`;
                             }
 
                             case 'batch': {
+                              tipsReceived = true;
+                              openModalIfNeeded();
                               const items: Tip[] = msg.items || [];
                               setTips(prev => {
                                 const next = [...prev, ...items];
@@ -2850,36 +2999,42 @@ Try asking about one of these topics!`;
                             }
 
                             case 'error':
-                              setStreamError(msg.message || 'Stream error');
+                              closeWS();
+                              setIsAssistantLoading(false);
+                              if (modalShown) {
+                                setShowTipsModal(false);
+                              }
+                              Alert.alert(
+                                'Error',
+                                msg.message === 'Unauthorized'
+                                  ? 'Your session has expired. Please sign in again.'
+                                  : 'Failed to load tips. Please try again.',
+                                [{text: 'OK', style: 'cancel'}],
+                              );
                               break;
 
                             case 'done':
                               closeWS();
                               setIsAssistantLoading(false);
-                              setTimeout(() => {
-                                setTips(currentTips => {
-                                  if (currentTips.length === 0) {
-                                    Alert.alert(
-                                      'No Tips Found',
-                                      'Try asking about reading, science exploration, social skills, or language activities.',
-                                      [
-                                        {
-                                          text: 'See Examples',
-                                          onPress: () =>
-                                            Alert.alert(
-                                              'Try asking about:',
-                                              EXAMPLE_QUERIES.map(q => `• ${q}`).join('\n'),
-                                              [{text: 'OK'}],
-                                            ),
-                                        },
-                                        {text: 'OK', style: 'cancel'},
-                                      ],
-                                    );
-                                    setShowTipsModal(false);
-                                  }
-                                  return currentTips;
+                              if (!modalShown) {
+                                // No tips arrived and modal was never opened — alert directly
+                                Keyboard.dismiss();
+                                Alert.alert(
+                                  'No Tips Found',
+                                  'Try asking about reading, science exploration, social skills, or language activities.',
+                                  [{text: 'OK', style: 'cancel'}],
+                                );
+                              } else {
+                                // Sort so tips matching selected content preferences appear first
+                                setTips(prev => {
+                                  if (prev.length <= 1 || !contentPreferences.length) {return prev;}
+                                  return [...prev].sort((a, b) => {
+                                    const aMatch = (a.categories || []).some(c => contentPreferences.includes(c)) ? 0 : 1;
+                                    const bMatch = (b.categories || []).some(c => contentPreferences.includes(c)) ? 0 : 1;
+                                    return aMatch - bMatch;
+                                  });
                                 });
-                              }, 0);
+                              }
                               break;
 
                             default:
@@ -2889,6 +3044,9 @@ Try asking about one of these topics!`;
 
                         ws.onerror = () => {
                           setStreamError('Connection error');
+                          setIsAssistantLoading(false);
+                          // Do NOT close the modal here — on Android, ws.close() can
+                          // fire onerror before onclose, which would wipe visible tips.
                         };
 
                         ws.onclose = e => {
@@ -2900,6 +3058,12 @@ Try asking about one of these topics!`;
                             });
                           }
                           setIsStreaming(false);
+                          setIsAssistantLoading(false);
+                          // Keep already-rendered tips visible when Android reports
+                          // an abnormal websocket close after the stream delivered data.
+                          if (modalShown && !tipsReceived) {
+                            setShowTipsModal(false);
+                          }
                         };
                       } catch (e) {
                         console.error('tips error from modal', e);
@@ -2979,15 +3143,20 @@ Try asking about one of these topics!`;
             style={{
               width: '100%',
               maxWidth: 400,
+              maxHeight: '90%',
               borderRadius: 20,
               backgroundColor: '#fff',
-              padding: 24,
               shadowColor: '#000',
               shadowOffset: {width: 0, height: 4},
               shadowOpacity: 0.3,
               shadowRadius: 8,
               elevation: 8,
+              overflow: 'hidden',
             }}>
+            <ScrollView
+              contentContainerStyle={{padding: 24}}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={{marginBottom: 20}}>
               <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12}}>
@@ -3007,20 +3176,23 @@ Try asking about one of these topics!`;
             {(() => {
               const childName = userChildren.length === 1 ? userChildren[0].nickname : 'your child';
               const examples = [
-                {label: `Vocabulary tips for ${childName} at the grocery store`, icon: 'shopping-cart'},
-                {label: `Science tips for ${childName} at the park`, icon: 'park'},
-                {label: `Reading tips for ${childName} at the library`, icon: 'menu-book'},
-                {label: `Social skills tips for ${childName} during playtime`, icon: 'people'},
+                {label: `Tips for ${childName} at the grocery store`, icon: 'shopping-cart'},
+                {label: `Tips for ${childName} at the park`, icon: 'park'},
+                {label: `Tips for ${childName} at the library`, icon: 'menu-book'},
+                {label: `Tips for ${childName} during playtime`, icon: 'people'},
               ];
               return (
                 <View style={{marginBottom: 20}}>
                   <View style={{backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, marginBottom: 14}}>
                     <Text style={{fontSize: 13, color: '#6B7280', marginBottom: 6}}>Use this format:</Text>
                     <Text style={{fontSize: 15, fontWeight: '700', color: '#111827'}}>
-                      Give me tips for{' '}
+                      Tips for{' '}
                       <Text style={{color: '#6366F1'}}>CHILD'S NAME</Text>
-                      {' '}for{' '}
-                      <Text style={{color: '#6366F1'}}>ACTIVITY</Text>
+                      {' '}at{' '}
+                      <Text style={{color: '#6366F1'}}>ACTIVITY / PLACE</Text>
+                    </Text>
+                    <Text style={{fontSize: 12, color: '#9AA0A6', marginTop: 6}}>
+                      No need to mention the content type — it's set in your preferences.
                     </Text>
                   </View>
                   <Text style={{fontSize: 12, color: '#6B7280', marginBottom: 8, fontWeight: '500'}}>TAP AN EXAMPLE TO TRY IT</Text>
@@ -3038,6 +3210,27 @@ Try asking about one of these topics!`;
                 </View>
               );
             })()}
+
+            {/* Activities List */}
+            <View style={{marginBottom: 20}}>
+              <Text style={{fontSize: 12, color: '#6B7280', marginBottom: 8, fontWeight: '500'}}>ALL SUPPORTED ACTIVITIES</Text>
+              <ScrollView style={{maxHeight: 170}} showsVerticalScrollIndicator nestedScrollEnabled>
+                {ACTIVITY_CATEGORIES.map((cat, i) => (
+                  <View key={i} style={{marginBottom: 10}}>
+                    <Text style={{fontSize: 11, fontWeight: '700', color: '#4B5563', marginBottom: 4, letterSpacing: 0.3}}>
+                      {cat.label.toUpperCase()}
+                    </Text>
+                    <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 4}}>
+                      {cat.activities.map((activity, j) => (
+                        <View key={j} style={{backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3}}>
+                          <Text style={{fontSize: 11, color: '#6B7280'}}>{activity}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
 
             {/* Close Button */}
             <TouchableOpacity
@@ -3064,6 +3257,7 @@ Try asking about one of these topics!`;
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -3095,13 +3289,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   headerBar: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: Platform.select({ios: 30, android: 24, default: 24}),
+    borderBottomRightRadius: Platform.select({ios: 30, android: 24, default: 24}),
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 230,
+    height: Platform.select({ios: 230, android: 190, default: 190}),
   },
   topRow: {
     flexDirection: 'row',
@@ -3110,16 +3304,20 @@ const styles = StyleSheet.create({
   },
   brandingContainer: {flex: 1},
   appName: {
-    fontSize: 30,
+    fontSize: Platform.select({ios: 30, android: 26, default: 26}),
     fontWeight: 'bold',
     color: '#fff',
     letterSpacing: 1,
   },
-  tagline: {fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 4},
+  tagline: {
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: Platform.select({ios: 4, android: 2, default: 2}),
+  },
 
   searchRow: {
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: Platform.select({ios: 16, android: 12, default: 12}),
     flexDirection: 'row',
   },
   heroSearch: {
@@ -3127,17 +3325,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 22,
+    paddingHorizontal: Platform.select({ios: 14, android: 12, default: 12}),
+    height: Platform.select({ios: 44, android: 40, default: 40}),
+    borderRadius: Platform.select({ios: 22, android: 20, default: 20}),
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  heroSearchText: {flex: 1, marginLeft: 8, color: '#9AA0A6', fontSize: 15},
+  heroSearchText: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#9AA0A6',
+    fontSize: Platform.select({ios: 15, android: 14, default: 14}),
+  },
   iconBtn: {
-    height: 44,
-    width: 44,
-    borderRadius: 22,
+    height: Platform.select({ios: 44, android: 40, default: 40}),
+    width: Platform.select({ios: 44, android: 40, default: 40}),
+    borderRadius: Platform.select({ios: 22, android: 20, default: 20}),
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3148,11 +3351,11 @@ const styles = StyleSheet.create({
   // Card
   card: {
     backgroundColor: '#fff',
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    borderRadius: Platform.select({ios: 30, android: 24, default: 24}),
+    paddingHorizontal: Platform.select({ios: 16, android: 14, default: 14}),
+    paddingTop: Platform.select({ios: 12, android: 10, default: 10}),
     paddingBottom: 4,
-    marginBottom: 16,
+    marginBottom: Platform.select({ios: 16, android: 8, default: 8}),
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 6},
     shadowOpacity: 0.08,
@@ -3160,14 +3363,21 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 12,
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
   },
-  cardHeaderRow: {marginBottom: 12},
-  cardTitleRow: {fontSize: 18, fontWeight: '600', color: '#1F2937'},
-  cardSub: {fontSize: 13, color: '#9AA0A6'},
+  cardHeaderRow: {marginBottom: Platform.select({ios: 12, android: 8, default: 8})},
+  cardTitleRow: {
+    fontSize: Platform.select({ios: 18, android: 16, default: 16}),
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  cardSub: {
+    fontSize: Platform.select({ios: 13, android: 12, default: 12}),
+    color: '#9AA0A6',
+  },
 
   // Pref grid
   prefGrid: {
@@ -3201,19 +3411,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#F8F9FB',
-    borderRadius: 14,
-    minHeight: 48,
+    borderRadius: Platform.select({ios: 14, android: 12, default: 12}),
+    minHeight: Platform.select({ios: 48, android: 42, default: 42}),
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: Platform.select({ios: 12, android: 9, default: 9}),
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 12,
+    marginBottom: Platform.select({ios: 12, android: 8, default: 8}),
   },
-  fieldText: {flex: 1, marginLeft: 8, color: '#111827', fontSize: 15, textAlignVertical: 'top', minHeight: 24},
+  fieldText: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#111827',
+    fontSize: Platform.select({ios: 15, android: 14, default: 14}),
+    textAlignVertical: 'top',
+    minHeight: Platform.select({ios: 24, android: 22, default: 22}),
+  },
   micPill: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: Platform.select({ios: 32, android: 30, default: 30}),
+    height: Platform.select({ios: 32, android: 30, default: 30}),
+    borderRadius: Platform.select({ios: 16, android: 15, default: 15}),
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3221,12 +3438,16 @@ const styles = StyleSheet.create({
 
   // CTA
   ctaGradient: {
-    height: 44,
-    borderRadius: 22,
+    height: Platform.select({ios: 44, android: 40, default: 40}),
+    borderRadius: Platform.select({ios: 22, android: 20, default: 20}),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ctaText: {color: '#fff', fontWeight: '700', fontSize: 15},
+  ctaText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: Platform.select({ios: 15, android: 14, default: 14}),
+  },
 
   // Small avatar dot
   avatarDot: {
@@ -3245,8 +3466,8 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 22,
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 6,
+    borderRadius: Platform.select({ios: 28, android: 24, default: 24}),
+    padding: Platform.select({ios: 6, android: 5, default: 5}),
     flexDirection: 'row',
     justifyContent: 'space-between',
     shadowColor: '#000',
@@ -3257,13 +3478,17 @@ const styles = StyleSheet.create({
   },
   pillItem: {
     flex: 1,
-    height: 38,
-    borderRadius: 22,
+    height: Platform.select({ios: 38, android: 34, default: 34}),
+    borderRadius: Platform.select({ios: 22, android: 18, default: 18}),
     alignItems: 'center',
     justifyContent: 'center',
   },
   pillItemActive: {backgroundColor: '#F1F5FF'},
-  pillText: {fontSize: 14, color: '#6B7280', fontWeight: '600'},
+  pillText: {
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
+    color: '#6B7280',
+    fontWeight: '600',
+  },
   pillTextActive: {color: '#111827'},
 
   // Loading

@@ -7,11 +7,26 @@ import React from 'react';
 import App from '../App';
 
 // Note: import explicitly to use the types shipped with jest.
-import {it} from '@jest/globals';
+import {it, jest} from '@jest/globals';
 
 // Note: test renderer must be required after react-native.
-import renderer from 'react-test-renderer';
+import renderer, {act} from 'react-test-renderer';
 
-it('renders correctly', () => {
-  renderer.create(<App />);
+jest.useFakeTimers();
+
+it('renders correctly', async () => {
+  let tree: renderer.ReactTestRenderer | undefined;
+
+  await act(async () => {
+    tree = renderer.create(<App />);
+    await Promise.resolve();
+    jest.runOnlyPendingTimers();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  await act(async () => {
+    tree?.unmount();
+    await Promise.resolve();
+  });
 });
