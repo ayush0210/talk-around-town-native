@@ -23,7 +23,7 @@ import MainScreen from '../screens/MainScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import LocationListScreen from '../screens/LocationList';
 import SettingsScreen from '../screens/SettingsScreen'; // Import SettingsScreen
-import {Location} from 'react-native-get-location';
+import {Location} from '../types';
 import AboutScreen from '../screens/AboutScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import ReminderSettingsScreen from '../screens/ReminderSettingsScreen';
@@ -31,6 +31,7 @@ import Tips from '../screens/TipsScreen';
 import ContentSelectionScreen from '../ContentSelectionScreen';
 import CustomTabBar from './CustomTabBar';
 import {CopilotProvider, useCopilot} from 'react-native-copilot';
+import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 
 // Types
 export type RootStackParamList = {
@@ -61,6 +62,7 @@ export type RootStackParamList = {
       tipImage?: string;
     };
   };
+  Diagnostics: undefined;
 };
 
 type AuthStackParamList = {
@@ -214,6 +216,11 @@ const RootNavigator = () => {
         {isAdmin && (
           <RootStack.Screen name="Dashboard" component={DashboardScreen} />
         )}
+        <RootStack.Screen
+          name="Diagnostics"
+          component={DiagnosticsScreen}
+          options={{headerShown: false}}
+        />
       </RootStack.Navigator>
     );
   }

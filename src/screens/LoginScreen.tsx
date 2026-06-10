@@ -1,6 +1,9 @@
-import React, {useContext, useState, useEffect, useCallback} from 'react';
+import React, {useContext, useState, useEffect, useCallback, useRef} from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
+  Keyboard,
   Text,
   TextInput,
   TouchableOpacity,
@@ -47,6 +50,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     'loading' | 'success' | 'error' | 'skipped'
   >('loading');
   const {isLoading, login} = useContext<AuthContextType>(AuthContext);
+  const keyboardAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      Animated.timing(keyboardAnimation, {
+        toValue: 1,
+        duration: Platform.OS === 'android' ? 280 : 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      Animated.timing(keyboardAnimation, {
+        toValue: 0,
+        duration: Platform.OS === 'android' ? 220 : 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardAnimation]);
 
   const updateServerToken = useCallback(
     async (fcmToken: string, accessToken: string) => {
@@ -96,6 +130,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       const maxRetries = 3;
 
       try {
+        const messagingModule = messaging();
         console.log(
           `Attempting to get FCM token (attempt ${retryCount + 1}/${
             maxRetries + 1
@@ -103,15 +138,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         );
 
         // Step 1: Check if messaging is available (especially important for iOS simulator)
-        if (Platform.OS === 'ios') {
+        if (
+          Platform.OS === 'ios' &&
+          typeof messagingModule.registerDeviceForRemoteMessages === 'function'
+        ) {
           console.log('iOS: Registering device for remote messages...');
-          await messaging().registerDeviceForRemoteMessages();
+          await messagingModule.registerDeviceForRemoteMessages();
         }
 
         // Step 2: Request permission with iOS-specific handling
         let authStatus;
         try {
-          authStatus = await messaging().requestPermission();
+          if (typeof messagingModule.requestPermission !== 'function') {
+            setFcmTokenStatus('skipped');
+            return;
+          }
+          authStatus = await messagingModule.requestPermission();
           console.log('Permission status:', authStatus);
         } catch (permissionError) {
           console.error('Permission request failed:', permissionError);
@@ -119,7 +161,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
           if (Platform.OS === 'ios') {
             // On iOS, try alternative permission approach
             try {
-              authStatus = await messaging().requestPermission({
+              authStatus = await messagingModule.requestPermission({
                 alert: true,
                 badge: true,
                 sound: true,
@@ -156,7 +198,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
-          fcmToken = await messaging().getToken();
+          if (typeof messagingModule.getToken !== 'function') {
+            setFcmTokenStatus('skipped');
+            return;
+          }
+
+          fcmToken = await messagingModule.getToken();
 
           if (!fcmToken) {
             throw new Error('No FCM token received');
@@ -242,6 +289,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   // Initialize FCM token on component mount
   useEffect(() => {
+    if (Platform.OS === 'ios') {
+      setFcmTokenStatus('skipped');
+      return;
+    }
+
     // Delay FCM token retrieval to allow app to fully initialize
     const initializeFCM = async () => {
       // Wait a bit for the app to settle, especially important on iOS
@@ -254,7 +306,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
   // Listen for token refresh (important for iOS)
   useEffect(() => {
-    const unsubscribe = messaging().onTokenRefresh(async token => {
+    if (Platform.OS === 'ios') {
+      return;
+    }
+
+    const messagingModule = messaging();
+    if (typeof messagingModule.onTokenRefresh !== 'function') {
+      return;
+    }
+
+    const unsubscribe = messagingModule.onTokenRefresh(async token => {
       console.log('FCM Token refreshed:', token?.substring(0, 20) + '...');
 
       const tokenData: TokenData = {
@@ -352,6 +413,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
   };
 
   const insets = useSafeAreaInsets();
+  const keyboardContentStyle = {
+    transform: [
+      {
+        translateY: keyboardAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, Platform.OS === 'android' ? -120 : -80],
+        }),
+      },
+    ],
+  };
 
   return (
     <LinearGradient
@@ -359,10 +430,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
       style={[styles.gradientBackground, {paddingTop: insets.top + 5}]}
       useAngle={true}
       angle={135}>
-      <View>
+      <View style={styles.container}>
         <StatusBar barStyle="light-content" />
 
-        <View style={styles.scrollContent}>
+        <Animated.View style={[styles.scrollContent, keyboardContentStyle]}>
           {/* Header Section */}
           <View style={styles.headerContainer}>
             <View style={styles.titleContainer}>
@@ -449,7 +520,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Loading Spinner (Login screen only) */}
         <Spinner visible={isSubmitting} />
@@ -490,7 +561,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   scrollContent: {
-    flexGrow: 1,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Platform.select({ios: 40, android: 28, default: 28}),

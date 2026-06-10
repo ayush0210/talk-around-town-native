@@ -13,8 +13,6 @@ import Navigation from './src/components/Navigation';
 import {AuthProvider} from './src/context/AuthContext';
 import {LocationProvider} from './src/context/LocationContext';
 import {AudioRecordingProvider} from './src/context/AudioRecordingContext';
-// import RemoteNotification from './src/components/RemoteNotification';
-import messaging from '@react-native-firebase/messaging';
 import AppStateTracker from './src/components/AppStateTracker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {CopilotProvider, useCopilot} from 'react-native-copilot';
@@ -126,14 +124,7 @@ const App = () => {
       console.log('Version:', Platform.Version);
       // iOS specific checks
       if (Platform.OS === 'ios') {
-        const authStatus = await messaging().hasPermission();
-        const notificationSettings = await messaging().requestPermission();
         console.log('\n-------- iOS Permissions --------');
-        console.log('FCM Auth Status:', authStatus);
-        console.log('Notification Settings:', notificationSettings);
-        console.log('Background Modes Enabled:', messaging().isAutoInitEnabled);
-        // Log notification authorization status
-        console.log('Notification Auth Status:', notificationSettings);
       }
       // Log general app info
       console.log('\n-------- App Settings --------');
@@ -182,7 +173,6 @@ const App = () => {
             </LinearGradient>
 
             <AppStateTracker />
-            {/* <RemoteNotification /> */}
             <Navigation />
           </CopilotProvider>
         </AudioRecordingProvider>

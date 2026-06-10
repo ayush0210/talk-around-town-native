@@ -13,6 +13,8 @@ import {
   FlatList,
   SafeAreaView,
   Platform,
+  TextInput,
+  PermissionsAndroid,
 } from 'react-native';
 import {AuthContext, AuthContextType} from '../context/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
@@ -83,6 +85,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
   const [hasSurveyPersonalization, setHasSurveyPersonalization] =
     useState(false);
 
+  // Report an Issue state
+  const [showReportIssueModal, setShowReportIssueModal] = useState(false);
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSubmitResult, setReportSubmitResult] = useState<'success' | 'error' | null>(null);
+
   // Use the enhanced children info hook
   const {
     children: childrenInfo,
@@ -96,6 +104,77 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
     retryFetch,
     needsProfileCompletion,
   } = useChildrenInfo();
+
+  const closeReportIssueModal = () => {
+    setShowReportIssueModal(false);
+    setReportDescription('');
+    setReportSubmitResult(null);
+  };
+
+  const submitIssueReport = async () => {
+    const trimmed = reportDescription.trim();
+    if (!trimmed) {
+      Alert.alert('Required', 'Please describe the issue before submitting.');
+      return;
+    }
+
+    setReportSubmitting(true);
+    setReportSubmitResult(null);
+
+    try {
+      let locationPerm = 'unknown';
+      let notifPerm = 'unknown';
+      if (Platform.OS === 'android') {
+        const locGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        locationPerm = locGranted ? 'granted' : 'denied';
+        if (Platform.Version >= 33) {
+          const notifGranted = await PermissionsAndroid.check(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+          );
+          notifPerm = notifGranted ? 'granted' : 'denied';
+        } else {
+          notifPerm = 'n/a (pre-Android-13)';
+        }
+      }
+
+      const deviceModel =
+        Platform.OS === 'android'
+          ? (Platform.constants as any)?.Model ?? 'Unknown Android'
+          : 'iOS Device';
+
+      const payload = {
+        description: trimmed,
+        device_model: deviceModel,
+        os_name: Platform.OS,
+        os_version: String(Platform.Version),
+        app_version: '0.0.1',
+        location_permission: locationPerm,
+        notification_permission: notifPerm,
+      };
+
+      const response = await fetchWithAuth(`${BASE_URL}/api/issue-reports`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo?.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        setReportSubmitResult('success');
+        setReportDescription('');
+      } else {
+        setReportSubmitResult('error');
+      }
+    } catch {
+      setReportSubmitResult('error');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   const confirmDeleteAccount = () => {
     Alert.alert(
@@ -872,6 +951,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
                 </View>
               </Pressable>
 
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => setShowReportIssueModal(true)}>
+                <View style={styles.itemLeft}>
+                  <Icon
+                    name="bug-report"
+                    size={22}
+                    color="#6366F1"
+                    style={styles.menuIcon}
+                  />
+                  <Text style={styles.menuText}>Report an Issue</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color="#1F2937" />
+              </Pressable>
+
               <Pressable style={styles.dangerMenuItem} onPress={() => logout()}>
                 <View style={styles.itemLeft}>
                   <Icon
@@ -967,6 +1061,30 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
                   style={styles.retryButton}>
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Developer diagnostics — only visible in debug builds */}
+            {__DEV__ && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Developer</Text>
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => navigation.navigate('Diagnostics' as any)}>
+                  <View style={styles.itemLeft}>
+                    <Icon
+                      name="bug-report"
+                      size={22}
+                      color="#dc2626"
+                      style={styles.menuIcon}
+                    />
+                    <View style={styles.menuTextContainer}>
+                      <Text style={styles.menuText}>Notification Diagnostics</Text>
+                      <Text style={styles.cacheSubtext}>Pipeline debug screen</Text>
+                    </View>
+                  </View>
+                  <Icon name="chevron-right" size={20} color="#1F2937" />
+                </Pressable>
               </View>
             )}
 
@@ -1156,6 +1274,173 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({navigation}) => {
           onClose={() => setShowPersonalizationSurvey(false)}
           onComplete={handleSurveyComplete}
         />
+
+        {/* Report an Issue Modal */}
+        <Modal
+          visible={showReportIssueModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={closeReportIssueModal}>
+          <SafeAreaView style={{flex: 1, backgroundColor: '#F9FAFB'}}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: '#E5E7EB',
+                backgroundColor: '#fff',
+              }}>
+              <Text
+                style={{fontSize: 18, fontWeight: '700', color: '#1F2937'}}>
+                Report an Issue
+              </Text>
+              <TouchableOpacity onPress={closeReportIssueModal}>
+                <Icon name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{flex: 1}}
+              contentContainerStyle={{padding: 20}}
+              keyboardShouldPersistTaps="handled">
+              {reportSubmitResult === 'success' ? (
+                <View
+                  style={{alignItems: 'center', paddingVertical: 48}}>
+                  <Icon name="check-circle" size={64} color="#10B981" />
+                  <Text
+                    style={{
+                      fontSize: 20,
+                      fontWeight: '700',
+                      color: '#1F2937',
+                      marginTop: 16,
+                      marginBottom: 8,
+                    }}>
+                    Report Submitted!
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: '#6B7280',
+                      textAlign: 'center',
+                      lineHeight: 22,
+                    }}>
+                    Thank you for letting us know. We will look into this as
+                    soon as possible.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeReportIssueModal}
+                    style={{
+                      marginTop: 32,
+                      backgroundColor: '#6366F1',
+                      paddingHorizontal: 32,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                    }}>
+                    <Text
+                      style={{
+                        color: '#fff',
+                        fontWeight: '600',
+                        fontSize: 15,
+                      }}>
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#4B5563',
+                      marginBottom: 8,
+                      lineHeight: 20,
+                    }}>
+                    Describe the issue you experienced. We will also attach
+                    basic device and permission information to help us
+                    investigate.
+                  </Text>
+
+                  <TextInput
+                    multiline
+                    numberOfLines={6}
+                    value={reportDescription}
+                    onChangeText={setReportDescription}
+                    placeholder="What went wrong? Include any steps that led to the issue."
+                    placeholderTextColor="#9CA3AF"
+                    style={{
+                      backgroundColor: '#fff',
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      borderRadius: 10,
+                      padding: 14,
+                      fontSize: 15,
+                      color: '#1F2937',
+                      minHeight: 140,
+                      textAlignVertical: 'top',
+                      marginBottom: 16,
+                    }}
+                    maxLength={2000}
+                  />
+
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: '#9CA3AF',
+                      marginBottom: 24,
+                      textAlign: 'right',
+                    }}>
+                    {reportDescription.length}/2000
+                  </Text>
+
+                  {reportSubmitResult === 'error' && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: '#FEF2F2',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 16,
+                        gap: 8,
+                      }}>
+                      <Icon name="error-outline" size={18} color="#EF4444" />
+                      <Text style={{fontSize: 13, color: '#B91C1C', flex: 1}}>
+                        Failed to submit. Please check your connection and try
+                        again.
+                      </Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={submitIssueReport}
+                    disabled={reportSubmitting}
+                    style={{
+                      backgroundColor: reportSubmitting ? '#A5B4FC' : '#6366F1',
+                      paddingVertical: 14,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                    }}>
+                    {reportSubmitting ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text
+                        style={{
+                          color: '#fff',
+                          fontWeight: '700',
+                          fontSize: 15,
+                        }}>
+                        Submit Report
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </View>
     </LinearGradient>
   );

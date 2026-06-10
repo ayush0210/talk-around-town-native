@@ -21,7 +21,21 @@
       "Bash(python3)",
       "Bash(python3 -c \"import docx; print\\('ok'\\)\")",
       "Bash(/opt/homebrew/bin/python3 -c \"import docx; print\\('ok'\\)\")",
-      "Bash(/opt/homebrew/bin/python3)"
+      "Bash(/opt/homebrew/bin/python3)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js\\)$\")",
+      "Bash(node --input-type=module)",
+      "Bash(node -e \"import\\('./utils/strictDomains.js'\\).then\\(m => console.log\\('strictDomains OK'\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e \"import\\('./utils/supportedActivities.js'\\).then\\(m => console.log\\('supportedActivities count:', m.SUPPORTED_ACTIVITIES.length\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(awk '/CREATE TABLE `users`/,/;/' /Users/ayushmishra/Desktop/talk-around-town-backend/db_backup.sql)",
+      "Bash(node --input-type=module --experimental-vm-modules)",
+      "Bash(2>&1)",
+      "Bash(npx eslint *)",
+      "Bash(grep -A 5 \"CREATE TABLE \\\\`children\\\\`\" /Users/ayushmishra/Desktop/talk-around-town-backend/db_backup.sql)",
+      "Bash(mkdir -p /Users/ayushmishra/Desktop/talk-around-town-native/src/diagnostics)",
+      "Bash(xargs cat)"
+    ],
+    "additionalDirectories": [
+      "/Users/ayushmishra/Desktop/talk-around-town-native/src"
     ]
   }
 }

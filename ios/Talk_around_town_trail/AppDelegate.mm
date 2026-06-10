@@ -127,14 +127,13 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
   NSLog(@"Will present notification: %@", userInfo);
   
   if ([[FIRMessaging messaging] appDidReceiveMessage:userInfo]) {
-    // Handle Firebase foreground message
-    completionHandler(UNNotificationPresentationOptionSound | 
-                     UNNotificationPresentationOptionBanner | 
-                     UNNotificationPresentationOptionList);
+    // Firebase message: the JS onMessage handler displays it via Notifee.
+    // Passing any presentation options here would cause a duplicate banner.
+    completionHandler(UNNotificationPresentationOptionNone);
   } else {
-    // Default presentation options
-    completionHandler(UNNotificationPresentationOptionSound | 
-                     UNNotificationPresentationOptionAlert | 
+    // Local / non-Firebase notification — let the OS present it normally.
+    completionHandler(UNNotificationPresentationOptionSound |
+                     UNNotificationPresentationOptionAlert |
                      UNNotificationPresentationOptionBadge);
   }
 }

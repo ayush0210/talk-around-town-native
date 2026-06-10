@@ -53,8 +53,6 @@
         
       </intent-filter>
     </receiver>
-  <service android:name="com.example.BackgroundActivity" />
-  
     <service
       android:name="com.dieam.reactnativepushnotification.modules.RNPushNotificationListenerService"
       android:exported="false">

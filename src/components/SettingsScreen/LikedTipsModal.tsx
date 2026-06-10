@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useContext, useEffect, useRef, useState} from 'react';
 import {
   Modal,
   View,
@@ -13,6 +13,9 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Sound from 'react-native-sound';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {fetchWithAuth} from '../../api/auth';
+import {AuthContext} from '../../context/AuthContext';
+import {BASE_URL} from '../../config';
 
 interface Tip {
   id: number;
@@ -38,7 +41,7 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
   showLikedTipsModal,
   setShowLikedTipsModal,
 }) => {
-  //   const audioCache = useRef<Map<number, string>>(new Map());
+  const {userInfo} = useContext<any>(AuthContext);
   const currentSound = useRef<any>(null);
   const [activeAudioKey, setActiveAudioKey] = useState<string | number | null>(
     null,
@@ -63,22 +66,14 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
 
   const speakTip = useCallback(
     async (tip: Tip) => {
-      // If this tip is already playing, toggle to stop
-
       const key = tipKey(tip);
 
       if (activeAudioKey === key && isPlaying) {
-        if (currentSound.current) {
-          currentSound.current.stop();
-          currentSound.current.release();
-          currentSound.current = null;
-        }
-        setIsPlaying(false);
-        setActiveAudioKey(null);
+        cleanupSound();
+        setAudioLoadingIndex(null);
         return;
       }
 
-      // Stop anything else that might be playing
       if (currentSound.current) {
         currentSound.current.stop();
         currentSound.current.release();
@@ -88,20 +83,32 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
       setActiveAudioKey(key);
 
       try {
-        // let audioUrl = audioCache.current.get(key);
         let audioUrl = '';
 
-        if (tip.audioUrl) {
-          audioUrl = `http://https://enact.education.ufl.edu:4000/audio${tip.audioUrl}`;
-          //   audioCache.current.set(key, audioUrl);
-        } else {
-          const res = await fetch(
-            'http://https://enact.education.ufl.edu:4000/generate-tip-audio',
+        if (typeof tip.id === 'number' && !tip.isGenerated) {
+          const res = await fetchWithAuth(
+            `${BASE_URL}/api/tips/audio/${tip.id}/generate`,
             {
               method: 'POST',
-              headers: {'Content-Type': 'application/json'},
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${userInfo.access_token}`,
+              },
+            },
+          );
+          if (!res.ok) {throw new Error('Failed to generate audio');}
+          const data = await res.json();
+          audioUrl = `${BASE_URL}${data.audioUrl}`;
+        } else {
+          const res = await fetchWithAuth(
+            `${BASE_URL}/api/tips/audio/generate-from-content`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${userInfo.access_token}`,
+              },
               body: JSON.stringify({
-                tipId: tip.id,
                 title: tip.title,
                 body: tip.body,
                 details: tip.details,
@@ -109,41 +116,43 @@ const LikedTipsModal: React.FC<LikedTipsModal> = ({
             },
           );
           if (!res.ok) {throw new Error('Failed to generate audio');}
-          const {audioUrl: newUrl} = await res.json();
-          audioUrl = `http://https://enact.education.ufl.edu:4000/audio${newUrl}`;
-          tip.audioUrl = newUrl;
-          //   audioCache.current.set(key, audioUrl);
+          const data = await res.json();
+          audioUrl = `${BASE_URL}${data.audioUrl}`;
         }
 
-        if (!audioUrl) {return;}
+        if (!audioUrl) {throw new Error('No audio URL received');}
 
         currentSound.current = new Sound(audioUrl, '', err => {
           if (err) {
             console.error('load sound error', err);
-            Alert.alert('Error', 'Failed to play audio. Please try again.');
+            Alert.alert('Error', 'Failed to load audio. Please try again.');
             setIsPlaying(false);
             setActiveAudioKey(null);
+            setAudioLoadingIndex(null);
             return;
           }
           setIsPlaying(true);
+          setAudioLoadingIndex(null);
           currentSound.current?.play((success: any) => {
-            if (!success)
-              {Alert.alert('Error', 'Audio playback failed. Please try again.');}
+            if (!success) {
+              Alert.alert('Error', 'Audio playback failed. Please try again.');
+            }
             setIsPlaying(false);
             setActiveAudioKey(null);
             currentSound.current?.release();
             currentSound.current = null;
+            setAudioLoadingIndex(null);
           });
         });
       } catch (e) {
         console.error('playback error', e);
+        Alert.alert('Error', 'Failed to play audio. Please try again.');
         setIsPlaying(false);
         setActiveAudioKey(null);
+        setAudioLoadingIndex(null);
       }
-
-      setAudioLoadingIndex(null);
     },
-    [activeAudioKey, isPlaying],
+    [activeAudioKey, isPlaying, userInfo],
   );
 
   const cleanupSound = () => {

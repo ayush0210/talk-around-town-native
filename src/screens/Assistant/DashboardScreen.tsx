@@ -319,7 +319,9 @@ const DashboardScreen: React.FC = () => {
       {return null;}
 
     return {
-      labels: dashboardData.childrenAges.map(item => `${item.age}y`),
+      labels: dashboardData.childrenAges.map(item =>
+        item.age === 0 ? '<1y' : `${item.age}y`,
+      ),
       datasets: [
         {
           data: dashboardData.childrenAges.map(item => item.count),

@@ -49,8 +49,6 @@ import Voice from '@react-native-voice/voice';
 import Sound from 'react-native-sound';
 import EventSource from 'react-native-event-source';
 import {AuthContext} from '../context/AuthContext';
-import Notification from '../components/Notification';
-
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {fetchWithAuth} from '../api/auth';
 import PersonalizationSurvey from '../components/PersonalizationSurvey';
@@ -2556,7 +2554,6 @@ Try asking about one of these topics!`;
       <View style={styles.loadingContainer}>
         <Spinner visible />
         <Text style={styles.loadingText}>Initializing...</Text>
-        <Notification />
       </View>
     );
   }
@@ -2566,7 +2563,6 @@ Try asking about one of these topics!`;
       <View style={styles.loadingContainer}>
         <Spinner visible />
         <Text style={styles.loadingText}>Please log in...</Text>
-        <Notification />
       </View>
     );
   }
@@ -2576,7 +2572,6 @@ Try asking about one of these topics!`;
       <View style={styles.loadingContainer}>
         <Spinner visible />
         <Text style={styles.loadingText}>{statusMessage || 'Loading...'}</Text>
-        <Notification />
       </View>
     );
   }
@@ -2593,7 +2588,6 @@ Try asking about one of these topics!`;
         translucent
         backgroundColor="transparent"
       />
-      <Notification />
       <PersonalizationSurvey
         visible={showSurvey}
         onClose={() => setShowSurvey(false)} // close from back button/etc

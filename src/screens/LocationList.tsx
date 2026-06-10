@@ -15,7 +15,7 @@ import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import {RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useFocusEffect} from '@react-navigation/native';
-import {Location} from 'react-native-get-location';
+import {Location} from '../types';
 import {AuthContext} from '../context/AuthContext';
 import {fetchWithAuth} from '../api/auth';
 import Spinner from 'react-native-loading-spinner-overlay';

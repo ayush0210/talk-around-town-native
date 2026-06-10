@@ -21,6 +21,7 @@ const ChildrenDetailsStep: React.FC<ChildrenDetailsStepProps> = ({
 }) => {
   const ages = useMemo(
     () => [
+      {value: '0', label: 'Under 1 Year'},
       {value: '1', label: '1 year'},
       {value: '2', label: '2 years'},
       {value: '3', label: '3 years'},

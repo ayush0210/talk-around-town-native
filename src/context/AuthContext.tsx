@@ -5,6 +5,7 @@ import {BASE_URL} from '../config';
 import {Alert} from 'react-native';
 
 export interface UserInfo {
+  id?: number;
   access_token?: string;
   refresh_token?: string;
   number_of_children?: number;

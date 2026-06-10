@@ -36,6 +36,7 @@ interface ChildInfoModalProps {
 }
 
 const AGES = [
+  {label: 'Under 1 Year', value: '0'},
   {label: '1 year', value: '1'},
   {label: '2 years', value: '2'},
   {label: '3 years', value: '3'},
@@ -349,7 +350,10 @@ const ChildInfoModal: React.FC<ChildInfoModalProps> = ({
                           {child.nickname || `Child ${child.id}`}
                         </Text>
                         <Text style={styles.childDate}>
-                          Age: {child.age} {child.age === 1 ? 'year' : 'years'}
+                          Age:{' '}
+                          {child.age === 0
+                            ? 'Under 1 Year'
+                            : `${child.age} ${child.age === 1 ? 'year' : 'years'}`}
                         </Text>
                       </View>
 

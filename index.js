@@ -15,9 +15,25 @@ import BackgroundFetch from 'react-native-background-fetch';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from '@react-native-community/geolocation';
 import {BASE_URL} from './src/config';
+import DLogger from './src/diagnostics/DiagnosticsLogger';
+
+// ─── Diagnostic: app startup ────────────────────────────────────────────────
+DLogger.log('APP_STARTUP', {
+  platform: Platform.OS,
+  platformVersion: String(Platform.Version),
+  deviceInfo: DLogger.deviceInfo,
+  timestamp: new Date().toISOString(),
+});
 
 // Improved navigation function with retry mechanism
 const navigateToNotification = (title, message, data) => {
+  DLogger.log('NAV_ATTEMPT', {
+    title,
+    locationType: data?.locationType,
+    locationName: data?.locationName,
+    dataKeys: Object.keys(data || {}),
+  });
+
   console.log('⭐ NAVIGATION ATTEMPT with data:', {
     title,
     message,
@@ -26,69 +42,46 @@ const navigateToNotification = (title, message, data) => {
     dataKeys: Object.keys(data || {}),
   });
 
-  // Use a more robust approach with multiple retries
   const maxAttempts = 5;
   let attempts = 0;
 
   const attemptNavigation = () => {
     attempts++;
+    DLogger.log('NAV_TRY', {attempt: attempts, maxAttempts, hasRef: !!navigationRef.current});
     console.log(`Navigation attempt ${attempts}/${maxAttempts}`);
 
-    if (navigationRef.current) {
-      try {
-        // First ensure we're in the Main navigator
-        const currentRoute = navigationRef.current.getCurrentRoute();
-        console.log('Current route:', currentRoute?.name);
-
-        if (currentRoute?.name !== 'Main') {
-          console.log('Navigating to Main first');
-          navigationRef.current.navigate('Main');
-
-          // Then navigate to Tips after a longer delay
-          setTimeout(() => {
-            console.log('Now navigating to Tips screen with notification data');
-            navigationRef.current.navigate('Tips', {
-              notificationData: {
-                title,
-                message,
-                ...data,
-              },
-            });
-            console.log('Navigation completed');
-          }, 500); // Increased delay for better reliability
-        } else {
-          // Already in Main, navigate directly
-          console.log('Already in Main, navigating to Tips');
-          navigationRef.current.navigate('Tips', {
-            notificationData: {
-              title,
-              message,
-              ...data,
-            },
-          });
-          console.log('Navigation completed');
-        }
-        return true; // Navigation succeeded
-      } catch (error) {
-        console.error('Navigation error:', error);
-        return false; // Navigation failed
-      }
-    } else {
+    if (!navigationRef.current) {
       console.log('Navigation ref not available');
+      return false;
+    }
+
+    try {
+      const currentRoute = navigationRef.current.getCurrentRoute();
+      console.log('Current route:', currentRoute?.name);
+
+      // Tips is in the RootStack — navigate directly from any screen.
+      navigationRef.current.navigate('Tips', {
+        notificationData: {title, message, ...data},
+      });
+      DLogger.log('NAV_SUCCESS', {attempt: attempts, route: 'Tips', title}, true);
+      console.log('Navigation to Tips completed');
+      return true;
+    } catch (error) {
+      DLogger.log('NAV_ERROR', {attempt: attempts, error: String(error?.message ?? error)}, true);
+      console.error('Navigation error:', error);
       return false;
     }
   };
 
-  // Try immediately
   if (attemptNavigation()) {
-    return; // Success on first try
+    return;
   }
 
-  // If first attempt fails, retry a few times with increasing delays
   const retryInterval = setInterval(() => {
     if (attempts >= maxAttempts || attemptNavigation()) {
       clearInterval(retryInterval);
       if (attempts >= maxAttempts) {
+        DLogger.log('NAV_EXHAUSTED', {maxAttempts, title}, true);
         console.error('Failed to navigate after maximum attempts');
       }
     }
@@ -97,17 +90,19 @@ const navigateToNotification = (title, message, data) => {
 
 // Enable comprehensive notification logging
 const enableNotificationLogging = () => {
-  // Log FCM token refreshes
   messaging().onTokenRefresh(token => {
+    DLogger.log('FCM_TOKEN_REFRESH', {tokenPrefix: token?.substring(0, 16)});
     console.log('FCM token refreshed:', token);
   });
 
-  // Handle app opened by tapping a background notification (iOS)
+  // Handle app opened by tapping a background notification
   messaging().onNotificationOpenedApp(message => {
-    console.log('App opened via notification:', message);
-    const { data, notification } = message;
+    const {data, notification} = message;
     const title = data?.title || notification?.title || 'New Notification';
     const body = data?.message || data?.body || notification?.body || '';
+    DLogger.log('FCM_APP_OPENED_FROM_NOTIFICATION', {title, hasData: !!data, hasNotif: !!notification}, true);
+    DLogger.updateState({lastNotificationTapped: {timestamp: new Date().toISOString(), title}});
+    console.log('App opened via notification:', message);
     navigateToNotification(title, body, {
       ...data,
       tipDetail: body,
@@ -115,16 +110,17 @@ const enableNotificationLogging = () => {
     });
   });
 
-  // Handle app launched from killed state by tapping a notification (iOS)
+  // Handle app launched from killed state by tapping a notification
   messaging()
     .getInitialNotification()
     .then(message => {
       if (message) {
-        console.log('App launched via notification:', message);
-        const { data, notification } = message;
+        const {data, notification} = message;
         const title = data?.title || notification?.title || 'New Notification';
         const body = data?.message || data?.body || notification?.body || '';
-        // Delay navigation to allow the navigator to mount first
+        DLogger.log('FCM_INITIAL_NOTIFICATION', {title, hasData: !!data, hasNotif: !!notification}, true);
+        DLogger.updateState({lastNotificationTapped: {timestamp: new Date().toISOString(), title}});
+        console.log('App launched via notification:', message);
         setTimeout(() => {
           navigateToNotification(title, body, {
             ...data,
@@ -132,24 +128,34 @@ const enableNotificationLogging = () => {
             tipCategory: data?.locationType || 'Tip',
           });
         }, 1000);
+      } else {
+        DLogger.log('FCM_INITIAL_NOTIFICATION_NONE', {});
       }
     });
 };
 
-// Call this function to enable all notification logging
 enableNotificationLogging();
 
 console.log('🔔 Registering FCM message handlers...');
+DLogger.log('FCM_HANDLER_REGISTRATION_START', {platform: Platform.OS});
 
-// Register notifee background event handler (required for notifee to work in background)
+// Register notifee background event handler
 notifee.onBackgroundEvent(async ({type, detail}) => {
+  DLogger.log('NOTIFEE_BG_EVENT', {
+    type,
+    notifId: detail.notification?.id,
+    title: detail.notification?.title,
+    dataType: detail.notification?.data?.type,
+  }, true);
   console.log('📲 Notifee background event:', type, detail.notification?.id);
+
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
-    // Skip recording-related notifications — they don't navigate to tips
     if (d.type === 'recording') {return;}
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
+    DLogger.log('NOTIFEE_BG_TAP', {title, body: body.substring(0, 60)}, true);
+    DLogger.updateState({lastNotificationTapped: {timestamp: new Date().toISOString(), title}});
     console.log('📲 Notifee background press:', {title, body});
     navigateToNotification(title, body, {
       ...d,
@@ -159,14 +165,22 @@ notifee.onBackgroundEvent(async ({type, detail}) => {
   }
 });
 
-// Handle foreground notifee notification taps (both iOS and Android)
+// Handle foreground notifee notification taps
 notifee.onForegroundEvent(({type, detail}) => {
+  DLogger.log('NOTIFEE_FG_EVENT', {
+    type,
+    notifId: detail.notification?.id,
+    title: detail.notification?.title,
+    dataType: detail.notification?.data?.type,
+  }, true);
+
   if (type === 3 /* EventType.PRESS */ && detail.notification?.data) {
     const d = detail.notification.data;
-    // Skip recording-related notifications — they don't navigate to tips
     if (d.type === 'recording') {return;}
     const title = d.title || 'New Notification';
     const body = d.message || d.body || '';
+    DLogger.log('NOTIFEE_FG_TAP', {title, body: body.substring(0, 60)}, true);
+    DLogger.updateState({lastNotificationTapped: {timestamp: new Date().toISOString(), title}});
     console.log('📲 Notifee foreground press:', {title, body});
     navigateToNotification(title, body, {
       ...d,
@@ -176,25 +190,42 @@ notifee.onForegroundEvent(({type, detail}) => {
   }
 });
 
-// Enhanced background message handler with better data preservation
+// Enhanced background message handler
 messaging().setBackgroundMessageHandler(async remoteMessage => {
-  console.log('📩 Background message received:', remoteMessage);
-
-  // Android messages are data-only — no notification field, so no OS auto-display.
-  // Always display via notifee here.
-  // (iOS background messages use the notification field for auto-display and are
-  // handled by APNs directly; this handler primarily runs on Android.)
+  // iOS: the backend sends a proper notification+apns payload so APNs already
+  // displayed the banner. Calling notifee.displayNotification here would
+  // produce a duplicate. Tap navigation is handled by onNotificationOpenedApp
+  // and getInitialNotification. Return early and let APNs own display.
+  if (Platform.OS === 'ios') {
+    DLogger.log('FCM_BG_MESSAGE_IOS_SKIP', {
+      title: remoteMessage.data?.title,
+      hasNotification: !!remoteMessage.notification,
+    }, true);
+    return;
+  }
 
   const title =
     remoteMessage.data?.title ||
     remoteMessage.notification?.title ||
     'New notification';
-
   const message =
     remoteMessage.data?.message ||
     remoteMessage.data?.body ||
     remoteMessage.notification?.body ||
     'You have a new notification';
+
+  DLogger.log('FCM_BG_MESSAGE_RECEIVED', {
+    title,
+    hasNotificationField: !!remoteMessage.notification,
+    hasDataField: !!remoteMessage.data,
+    dataKeys: Object.keys(remoteMessage.data || {}),
+    hasTips: !!remoteMessage.data?.tips,
+  }, true);
+  DLogger.updateState({
+    lastNotificationReceived: {timestamp: new Date().toISOString(), title, source: 'fcm_background'},
+  });
+
+  console.log('📩 Background message received:', remoteMessage);
 
   const enhancedData = {
     ...remoteMessage.data,
@@ -204,44 +235,65 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
     _isBackground: 'true',
   };
 
-  // Note: remoteMessage.data.tips is already a string (JSON), which is valid for notifee.
-  // Do not parse it here — keep it as a string so notifee doesn't reject it.
-
-  // Android: use notifee — creates the channel inline and works reliably
-  // in headless/background mode (unlike react-native-push-notification).
-  const channelId = await notifee.createChannel({
-    id: 'location-tips',
-    name: 'Location Tips',
-    importance: AndroidImportance.HIGH,
-  });
-
-  await notifee.displayNotification({
-    title,
-    body: message,
-    data: enhancedData,
-    android: {
-      channelId,
+  let channelId;
+  try {
+    channelId = await notifee.createChannel({
+      id: 'location-tips',
+      name: 'Location Tips',
       importance: AndroidImportance.HIGH,
-      pressAction: {id: 'default'},
-    },
-  });
+    });
+    DLogger.log('NOTIFEE_CHANNEL_CREATED', {channelId});
+  } catch (chanErr) {
+    DLogger.log('NOTIFEE_CHANNEL_ERROR', {error: String(chanErr?.message)}, true);
+    channelId = 'location-tips';
+  }
+
+  DLogger.log('NOTIFEE_DISPLAY_ATTEMPT', {title, channelId, appState: 'background'}, true);
+  try {
+    await notifee.displayNotification({
+      title,
+      body: message,
+      data: enhancedData,
+      android: {
+        channelId,
+        importance: AndroidImportance.HIGH,
+        pressAction: {id: 'default'},
+      },
+    });
+    DLogger.log('NOTIFEE_DISPLAY_SUCCESS', {title, channelId}, true);
+    DLogger.updateState({
+      lastNotificationDisplayed: {timestamp: new Date().toISOString(), title},
+    });
+  } catch (displayErr) {
+    DLogger.log('NOTIFEE_DISPLAY_ERROR', {title, error: String(displayErr?.message), channelId}, true);
+    console.error('📩 notifee.displayNotification failed:', displayErr);
+  }
 });
 
-// Foreground notification handling (both iOS and Android)
+// Foreground notification handling
 console.log('🔔 Registering foreground message handler...');
 messaging().onMessage(async remoteMessage => {
-  console.log('📩 Foreground message received:', remoteMessage);
-
   const title =
     remoteMessage.data?.title ||
     remoteMessage.notification?.title ||
     'New notification';
-
   const message =
     remoteMessage.data?.message ||
     remoteMessage.data?.body ||
     remoteMessage.notification?.body ||
     'You have a new notification';
+
+  DLogger.log('FCM_FG_MESSAGE_RECEIVED', {
+    title,
+    hasNotificationField: !!remoteMessage.notification,
+    hasDataField: !!remoteMessage.data,
+    hasTips: !!remoteMessage.data?.tips,
+  }, true);
+  DLogger.updateState({
+    lastNotificationReceived: {timestamp: new Date().toISOString(), title, source: 'fcm_foreground'},
+  });
+
+  console.log('📩 Foreground message received:', remoteMessage);
 
   const enhancedData = {
     ...remoteMessage.data,
@@ -251,36 +303,45 @@ messaging().onMessage(async remoteMessage => {
     _isForeground: 'true',
   };
 
-  // Note: remoteMessage.data.tips is already a string (JSON), which is valid for notifee.
-  // Do not parse it here — keep it as a string so notifee doesn't reject it.
-
-  // Use notifee for foreground display — reliable on both Android and iOS.
-  // (On iOS, FCM suppresses notification-type messages while in foreground,
-  // so we must display them manually regardless of platform.)
-  const channelId = await notifee.createChannel({
-    id: 'location-tips',
-    name: 'Location Tips',
-    importance: AndroidImportance.HIGH,
-  });
-
-  await notifee.displayNotification({
-    title,
-    body: message,
-    data: enhancedData,
-    android: {
-      channelId,
+  let channelId;
+  try {
+    channelId = await notifee.createChannel({
+      id: 'location-tips',
+      name: 'Location Tips',
       importance: AndroidImportance.HIGH,
-      pressAction: {id: 'default'},
-    },
-    ios: {
-      sound: 'default',
-      foregroundPresentationOptions: {
-        alert: true,
-        badge: true,
-        sound: true,
+    });
+  } catch (_) {
+    channelId = 'location-tips';
+  }
+
+  DLogger.log('NOTIFEE_FG_DISPLAY_ATTEMPT', {title, channelId}, true);
+  try {
+    await notifee.displayNotification({
+      title,
+      body: message,
+      data: enhancedData,
+      android: {
+        channelId,
+        importance: AndroidImportance.HIGH,
+        pressAction: {id: 'default'},
       },
-    },
-  });
+      ios: {
+        sound: 'default',
+        foregroundPresentationOptions: {
+          alert: true,
+          badge: true,
+          sound: true,
+        },
+      },
+    });
+    DLogger.log('NOTIFEE_FG_DISPLAY_SUCCESS', {title}, true);
+    DLogger.updateState({
+      lastNotificationDisplayed: {timestamp: new Date().toISOString(), title},
+    });
+  } catch (displayErr) {
+    DLogger.log('NOTIFEE_FG_DISPLAY_ERROR', {title, error: String(displayErr?.message)}, true);
+    console.error('📩 notifee fg displayNotification failed:', displayErr);
+  }
 });
 
 // Request permissions explicitly for iOS
@@ -288,11 +349,12 @@ if (Platform.OS === 'ios') {
   messaging()
     .requestPermission()
     .then(authStatus => {
+      DLogger.log('IOS_FCM_PERMISSION', {authStatus});
       console.log('iOS notification permission status:', authStatus);
     });
 }
 
-// Create notification channels (don't delete existing - just ensure they exist)
+// Create notification channels
 console.log('📱 Setting up notification channels...');
 
 PushNotification.channelExists('location-tips', exists => {
@@ -305,9 +367,13 @@ PushNotification.channelExists('location-tips', exists => {
         importance: 4,
         vibrate: true,
       },
-      created => console.log(`Main channel created: ${created}`),
+      created => {
+        DLogger.log('PN_CHANNEL_CREATED', {channelId: 'location-tips', created});
+        console.log(`Main channel created: ${created}`);
+      },
     );
   } else {
+    DLogger.log('PN_CHANNEL_EXISTS', {channelId: 'location-tips'});
     console.log('Main channel already exists');
   }
 });
@@ -329,16 +395,15 @@ PushNotification.channelExists('app-reminders', exists => {
   }
 });
 
-// Enhanced notification configuration with better debugging
 PushNotification.configure({
   onRegister: function (token) {
+    DLogger.log('PN_REGISTER', {tokenType: token.os, tokenPrefix: token.token?.substring(0, 16)});
     console.log('PushNotification TOKEN:', token);
   },
 
   onNotification: function (notification) {
     // Navigation on tap is handled by messaging().onNotificationOpenedApp()
     // and messaging().getInitialNotification() to avoid double navigation.
-    // Required on iOS
     notification.finish && notification.finish();
   },
 
@@ -357,50 +422,92 @@ const headlessTask = async (event) => {
   const taskId = event.taskId;
   const isTimeout = event.timeout;
 
-  if (isTimeout) {
-    console.log('[BackgroundFetch Headless] Task timed out:', taskId);
-    BackgroundFetch.finish(taskId);
-    return;
-  }
-
-  console.log('[BackgroundFetch Headless] Starting task:', taskId);
-
   try {
+    // Attempt to set user context from AsyncStorage for critical log relay
+    try {
+      const userInfoStr = await AsyncStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const ui = JSON.parse(userInfoStr);
+        if (ui.id && ui.access_token) {
+          DLogger.setUser(String(ui.id), ui.access_token);
+        }
+      }
+    } catch (_) {}
+
+    // Non-blocking — don't await so we don't consume the 30s HeadlessJsTask budget
+    DLogger.updateState({
+      lastBgFetchExecution: {timestamp: new Date().toISOString(), taskId},
+    });
+
+    if (isTimeout) {
+      DLogger.log('HEADLESS_TASK_TIMEOUT', {taskId}, true);
+      console.log('[BackgroundFetch Headless] Task timed out:', taskId);
+      return;
+    }
+
+    DLogger.log('HEADLESS_TASK_START', {taskId, platform: Platform.OS}, true);
+    console.log('[BackgroundFetch Headless] Starting task:', taskId);
+
     const userInfoStr = await AsyncStorage.getItem('userInfo');
     if (!userInfoStr) {
+      DLogger.log('HEADLESS_TASK_NO_USER', {taskId}, true);
       console.log('[BackgroundFetch Headless] No user info, skipping');
-      BackgroundFetch.finish(taskId);
       return;
     }
 
     const userInfo = JSON.parse(userInfoStr);
     if (!userInfo.access_token) {
+      DLogger.log('HEADLESS_TASK_NO_TOKEN', {taskId}, true);
       console.log('[BackgroundFetch Headless] No access token, skipping');
-      BackgroundFetch.finish(taskId);
       return;
     }
 
-    // Get current position
-    const coords = await new Promise((resolve, reject) => {
-      Geolocation.getCurrentPosition(
-        position => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        error => reject(error),
-        {
-          enableHighAccuracy: false,
-          timeout: 30000,
-          maximumAge: 60000,
-        },
-      );
-    });
+    // GPS timeout reduced to 10s — HeadlessJsTaskConfig hardcodes a 30s total
+    // execution window; 30s GPS + HTTP overhead reliably exceeded that budget,
+    // causing the task to be killed before BackgroundFetch.finish() was called.
+    let coords;
+    try {
+      coords = await new Promise((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          position => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            });
+          },
+          error => reject(error),
+          {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000,
+          },
+        );
+      });
+      DLogger.log('HEADLESS_TASK_LOCATION_ACQUIRED', {coords}, true);
+      console.log('[BackgroundFetch Headless] Got location:', coords);
+    } catch (locErr) {
+      DLogger.log('HEADLESS_TASK_LOCATION_ERROR', {
+        taskId,
+        code: locErr?.code,
+        message: locErr?.message,
+      }, true);
+      return;
+    }
 
-    console.log('[BackgroundFetch Headless] Got location:', coords);
+    let contentPreferences = [];
+    try {
+      const prefsStr = await AsyncStorage.getItem('contentPreferences');
+      if (prefsStr) {contentPreferences = JSON.parse(prefsStr);}
+    } catch (_) {}
 
-    // Send to server for geofence check
+    DLogger.log('HEADLESS_TASK_REQUEST_SENDING', {
+      taskId,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      contentPreferences,
+    }, true);
+
     const response = await fetch(`${BASE_URL}/endpoint`, {
       method: 'POST',
       headers: {
@@ -410,25 +517,42 @@ const headlessTask = async (event) => {
       body: JSON.stringify({
         latitude: coords.latitude,
         longitude: coords.longitude,
+        contentPreferences,
       }),
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      console.log('[BackgroundFetch Headless] Server response:', result);
-    }
+    const result = await response.json();
+    DLogger.log('HEADLESS_TASK_RESPONSE', {
+      taskId,
+      httpStatus: response.status,
+      status: result?.status,
+      location: result?.location,
+    }, true);
+    // Non-blocking — state update must not delay BackgroundFetch.finish()
+    DLogger.updateState({
+      lastLocationPoll: {
+        timestamp: new Date().toISOString(),
+        result: result?.status ?? `HTTP ${response.status}`,
+        coords: {latitude: coords.latitude, longitude: coords.longitude},
+      },
+    });
+    console.log('[BackgroundFetch Headless] Server response:', result);
   } catch (error) {
+    DLogger.log('HEADLESS_TASK_ERROR', {taskId, error: String(error?.message ?? error)}, true);
     console.error('[BackgroundFetch Headless] Error:', error);
+  } finally {
+    // Guaranteed to run — previously missing try/finally meant any unhandled
+    // throw above would exit without calling finish(), producing unknown:-1 completions.
+    DLogger.log('HEADLESS_TASK_FINISH', {taskId});
+    BackgroundFetch.finish(taskId);
   }
-
-  BackgroundFetch.finish(taskId);
 };
 
 // Register the headless task for Android
+DLogger.log('BG_FETCH_HEADLESS_REGISTER', {platform: Platform.OS});
 BackgroundFetch.registerHeadlessTask(headlessTask);
 
 // Required by notifee to display foreground service notifications on Android.
-// The promise must stay pending for the duration of the foreground service.
 notifee.registerForegroundService(() => new Promise(() => {}));
 
 AppRegistry.registerComponent(appName, () => App);

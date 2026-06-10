@@ -29,6 +29,7 @@ type TipsScreenRouteParams = {
       tipDetail?: string;
       tipCategory?: string;
       tipImage?: string;
+      tips?: string;
     };
   };
 };
@@ -85,9 +86,19 @@ const TipsScreen = () => {
     tipDetail?: string;
     tipCategory?: string;
     tipImage?: string;
+    tips?: string;
+  };
+
+  type StructuredTip = {
+    id: string | number;
+    title: string;
+    body: string;
+    details?: string;
+    categories?: string[];
   };
 
   const [tipData, setTipData] = useState<TipData | null>(null);
+  const [structuredTips, setStructuredTips] = useState<StructuredTip[]>([]);
 
   const handleShare = async () => {
     if (!tipData) {return;}
@@ -108,7 +119,16 @@ const TipsScreen = () => {
     // Extract notification data from route params
     if (route.params?.notificationData) {
       console.log('TipsScreen received notification data:', route.params.notificationData);
-      setTipData(route.params.notificationData);
+      const nd = route.params.notificationData;
+      setTipData(nd);
+      if (nd.tips) {
+        try {
+          const parsed = JSON.parse(nd.tips);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStructuredTips(parsed);
+          }
+        } catch (_) {}
+      }
 
       // Animate the content in
       Animated.parallel([
@@ -217,14 +237,20 @@ const TipsScreen = () => {
             ]}
           >
             <Text style={styles.tipTitle}>{tipData.title}</Text>
-            <Text style={styles.tipMessage}>{tipData.message}</Text>
 
-            {/* {tipData.tipDetail && (
-              <View style={styles.tipDetailContainer}>
-                <Text style={styles.tipDetailHeading}>More Information</Text>
-                <Text style={styles.tipDetail}>{tipData.tipDetail}</Text>
-              </View>
-            )} */}
+            {structuredTips.length > 0 ? (
+              structuredTips.map((tip, i) => (
+                <View key={`tip-${i}`} style={styles.tipCard}>
+                  <Text style={styles.tipCardTitle}>{tip.title}</Text>
+                  <Text style={styles.tipCardBody}>{tip.body}</Text>
+                  {tip.details ? (
+                    <Text style={styles.tipCardDetails}>{tip.details}</Text>
+                  ) : null}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.tipMessage}>{tipData.message}</Text>
+            )}
 
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
@@ -339,6 +365,32 @@ const styles = StyleSheet.create({
     fontSize: Platform.select({ios: 15, android: 13, default: 13}),
     lineHeight: Platform.select({ios: 22, android: 19, default: 19}),
     color: '#555',
+  },
+  tipCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: Platform.select({ios: 14, android: 12, default: 12}),
+    padding: Platform.select({ios: 16, android: 12, default: 12}),
+    marginBottom: Platform.select({ios: 12, android: 10, default: 10}),
+    borderLeftWidth: 3,
+    borderLeftColor: '#4A90E2',
+  },
+  tipCardTitle: {
+    fontSize: Platform.select({ios: 16, android: 14, default: 14}),
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 6,
+  },
+  tipCardBody: {
+    fontSize: Platform.select({ios: 14, android: 13, default: 13}),
+    color: '#444',
+    lineHeight: Platform.select({ios: 22, android: 19, default: 19}),
+  },
+  tipCardDetails: {
+    fontSize: Platform.select({ios: 13, android: 12, default: 12}),
+    color: '#777',
+    lineHeight: Platform.select({ios: 19, android: 17, default: 17}),
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   actionButtons: {
     flexDirection: 'row',

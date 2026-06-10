@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Platform, PermissionsAndroid, Alert, AppState } from 'react-native';
+import { Platform, PermissionsAndroid, Alert, AppState, Linking } from 'react-native';
 import Geolocation, { GeolocationResponse, GeolocationError } from '@react-native-community/geolocation';
 import { Location } from '../types';
 
@@ -101,19 +101,54 @@ export const useLocationTracking = () => {
         );
 
         if (fineLocationGranted === PermissionsAndroid.RESULTS.GRANTED) {
-          // Request background location for Android 10+
+          // Background location requires API 29+.
+          // On Android 12+ (API 31+) the system no longer allows the app to
+          // show a dialog for ACCESS_BACKGROUND_LOCATION — the request is
+          // silently denied. Users must grant "Allow all the time" manually
+          // in device Settings → Apps → ENACT → Permissions → Location.
           if (Platform.Version >= 29) {
-            const backgroundGranted = await PermissionsAndroid.request(
+            const alreadyGranted = await PermissionsAndroid.check(
               PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
-              {
-                title: 'Background Location',
-                message: 'Allow ENACT to access location in the background for location-based tips?',
-                buttonNeutral: 'Ask Me Later',
-                buttonNegative: 'Cancel',
-                buttonPositive: 'OK',
-              }
             );
-            console.log('Background location:', backgroundGranted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied');
+            console.log('[Location] Background location already granted:', alreadyGranted);
+
+            if (!alreadyGranted) {
+              if (Platform.Version >= 31) {
+                // Android 12+ — dialog approach is blocked by the OS.
+                // Direct the user to device Settings instead.
+                console.log('[Location] Android 12+: prompting user to grant background location in Settings');
+                Alert.alert(
+                  'Background Location Required',
+                  'To receive tips when you arrive at saved locations, please set location access to "Allow all the time" for ENACT.\n\nGo to: Settings → Apps → ENACT → Permissions → Location → Allow all the time.',
+                  [
+                    {text: 'Not Now', style: 'cancel'},
+                    {
+                      text: 'Open Settings',
+                      onPress: () => Linking.openSettings(),
+                    },
+                  ],
+                );
+              } else {
+                // Android 10–11 — dialog is still allowed.
+                const backgroundGranted = await PermissionsAndroid.request(
+                  PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+                  {
+                    title: 'Background Location',
+                    message:
+                      'Allow ENACT to access location in the background for location-based tips?',
+                    buttonNeutral: 'Ask Me Later',
+                    buttonNegative: 'Cancel',
+                    buttonPositive: 'OK',
+                  },
+                );
+                console.log(
+                  '[Location] Background location (Android 10-11):',
+                  backgroundGranted === PermissionsAndroid.RESULTS.GRANTED
+                    ? 'granted'
+                    : 'denied',
+                );
+              }
+            }
           }
           return true;
         }

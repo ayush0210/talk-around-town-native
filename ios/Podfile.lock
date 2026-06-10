@@ -7,13 +7,9 @@ PODS:
     - ExpoModulesCore
   - EXConstants (16.0.2):
     - ExpoModulesCore
-  - EXLocation (17.0.1):
-    - ExpoModulesCore
   - Expo (51.0.39):
     - ExpoModulesCore
   - ExpoAsset (10.0.10):
-    - ExpoModulesCore
-  - ExpoBackgroundFetch (12.0.1):
     - ExpoModulesCore
   - ExpoFileSystem (17.0.1):
     - ExpoModulesCore
@@ -44,9 +40,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - EXTaskManager (11.8.2):
-    - ExpoModulesCore
-    - UMAppLoader
   - FBLazyVector (0.75.4)
   - Firebase (11.5.0):
     - Firebase/Core (= 11.5.0)
@@ -1441,8 +1434,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-background-actions (3.0.1):
-    - React-Core
   - react-native-blur (4.4.1):
     - DoubleConversion
     - glog
@@ -1485,8 +1476,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-geolocation-service (5.3.1):
-    - React
   - react-native-get-random-values (1.11.0):
     - React-Core
   - react-native-google-maps (1.18.0):
@@ -1762,8 +1751,6 @@ PODS:
     - React-logger (= 0.75.4)
     - React-perflogger (= 0.75.4)
     - React-utils (= 0.75.4)
-  - ReactNativeGetLocation (4.0.1):
-    - React-Core
   - RecaptchaInterop (100.0.0)
   - RNAudioRecorderPlayer (3.6.12):
     - React-Core
@@ -1851,7 +1838,6 @@ PODS:
   - SocketRocket (0.7.0)
   - TextToSpeech (4.1.1):
     - React-Core
-  - UMAppLoader (4.6.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1860,15 +1846,12 @@ DEPENDENCIES:
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
   - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
-  - EXLocation (from `../node_modules/expo-location/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
-  - ExpoBackgroundFetch (from `../node_modules/expo-background-fetch/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
-  - EXTaskManager (from `../node_modules/expo-task-manager/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - Firebase
   - FirebaseAppCheckInterop
@@ -1916,10 +1899,8 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
-  - react-native-background-actions (from `../node_modules/react-native-background-actions`)
   - "react-native-blur (from `../node_modules/@react-native-community/blur`)"
   - "react-native-geolocation (from `../node_modules/@react-native-community/geolocation`)"
-  - react-native-geolocation-service (from `../node_modules/react-native-geolocation-service`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-google-maps (from `../node_modules/react-native-maps`)
   - react-native-maps (from `../node_modules/react-native-maps`)
@@ -1953,7 +1934,6 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
-  - ReactNativeGetLocation (from `../node_modules/react-native-get-location`)
   - RecaptchaInterop
   - RNAudioRecorderPlayer (from `../node_modules/react-native-audio-recorder-player`)
   - RNBackgroundFetch (from `../node_modules/react-native-background-fetch`)
@@ -1972,7 +1952,6 @@ DEPENDENCIES:
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - TextToSpeech (from `../node_modules/react-native-tts`)
-  - UMAppLoader (from `../node_modules/unimodules-app-loader/ios`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2009,14 +1988,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-application/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
-  EXLocation:
-    :path: "../node_modules/expo-location/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
     :path: "../node_modules/expo-asset/ios"
-  ExpoBackgroundFetch:
-    :path: "../node_modules/expo-background-fetch/ios"
   ExpoFileSystem:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
@@ -2025,8 +2000,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-keep-awake/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
-  EXTaskManager:
-    :path: "../node_modules/expo-task-manager/ios"
   FBLazyVector:
     :path: "../node_modules/react-native/Libraries/FBLazyVector"
   fmt:
@@ -2094,14 +2067,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
-  react-native-background-actions:
-    :path: "../node_modules/react-native-background-actions"
   react-native-blur:
     :path: "../node_modules/@react-native-community/blur"
   react-native-geolocation:
     :path: "../node_modules/@react-native-community/geolocation"
-  react-native-geolocation-service:
-    :path: "../node_modules/react-native-geolocation-service"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-google-maps:
@@ -2168,8 +2137,6 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
-  ReactNativeGetLocation:
-    :path: "../node_modules/react-native-get-location"
   RNAudioRecorderPlayer:
     :path: "../node_modules/react-native-audio-recorder-player"
   RNBackgroundFetch:
@@ -2204,8 +2171,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-vector-icons"
   TextToSpeech:
     :path: "../node_modules/react-native-tts"
-  UMAppLoader:
-    :path: "../node_modules/unimodules-app-loader/ios"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2215,15 +2180,12 @@ SPEC CHECKSUMS:
   DoubleConversion: 76ab83afb40bddeeee456813d9c04f67f78771b5
   EXApplication: c08200c34daca7af7fd76ac4b9d606077410e8ad
   EXConstants: 409690fbfd5afea964e5e9d6c4eb2c2b59222c59
-  EXLocation: 43e9b582ca63a23c6f0a18d8cbe2145b3a388b55
   Expo: 8c995afb875c15bf8439af0b20bcb9ed8f90d0bd
   ExpoAsset: 323700f291684f110fb55f0d4022a3362ea9f875
-  ExpoBackgroundFetch: a06c553ecaf0bade0acd691042d996b9ce926327
   ExpoFileSystem: 80bfe850b1f9922c16905822ecbf97acd711dc51
   ExpoFont: 00756e6c796d8f7ee8d211e29c8b619e75cbf238
   ExpoKeepAwake: 3b8815d9dd1d419ee474df004021c69fdd316d08
   ExpoModulesCore: 652c6599c9308d6d334987dbc5ddd9f72bd76cda
-  EXTaskManager: 9c3520305c3aa1b4a12a7c6d1e3f85f2779c06e9
   FBLazyVector: 430e10366de01d1e3d57374500b1b150fe482e6d
   Firebase: 7a56fe4f56b5ab81b86a6822f5b8f909ae6fc7e2
   FirebaseAnalytics: 2f4a11eeb7a0e9c6fcf642d4e6aaca7fa4d38c28
@@ -2275,10 +2237,8 @@ SPEC CHECKSUMS:
   React-logger: d79b704bf215af194f5213a6b7deec50ba8e6a9b
   React-Mapbuffer: 42c779748af341935a63ad8831723b8cb1e97830
   React-microtasksnativemodule: fc15e6b9e8cc5a99d1cfa0f31c454c4c3de4e7ae
-  react-native-background-actions: ecffd3f0864140ef6cf21c29be6819a02b531a52
   react-native-blur: 0a96a365a933508e8ee20b9b26ee3cf508d618be
   react-native-geolocation: cc79f2a7a8c6616db25b9728670bbb2011ded918
-  react-native-geolocation-service: 608e1da71a1ac31b4de64d9ef2815f697978c55b
   react-native-get-random-values: 21325b2244dfa6b58878f51f9aa42821e7ba3d06
   react-native-google-maps: ee48410bb3f1390abfa20592a44db5d6ada83e4d
   react-native-maps: 2e6e9896195781327ee15b33e3e84bf73c08207a
@@ -2312,7 +2272,6 @@ SPEC CHECKSUMS:
   React-utils: d1bae5ac6a5fb94a772ebfc7a7e1aba3a6706a3a
   ReactCodegen: 99b435b58bd874bb0626b3fb16437d2e8735d370
   ReactCommon: 1007c09a406a451ddbd874e51511aa541d6034f6
-  ReactNativeGetLocation: b4379a01dff72507d9abce5f4d569b98abef7761
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   RNAudioRecorderPlayer: 224c7de87722938aedce04000d09baa633148f5b
   RNBackgroundFetch: 3a45a819bafb71ce405ae3899714bbac0972f1d2
@@ -2332,7 +2291,6 @@ SPEC CHECKSUMS:
   RNVectorIcons: 7b81882e9c9369031aede0016dee0fe415cf2f43
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   TextToSpeech: 2b930ec3756afde499061f4f01ea895e1f75dccb
-  UMAppLoader: f17a5ee8e85b536ace0fc254b447a37ed198d57e
   Yoga: b05994d1933f507b0a28ceaa4fdb968dc18da178
 
 PODFILE CHECKSUM: 8d916f07078abad8e068adeb302f98f51f6d24a8
